@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Coda Formula Customizer",
+  "version": "1.0.0",
+  "description": "Custom you editor",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://coda.io/d/*",
+    "*://*.coda.io/d/*"
+  ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "Coda Formula Customizer"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://coda.io/d/*", "*://*.coda.io/d/*"],
+      "js": ["src/bundle.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

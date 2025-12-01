@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <rect width="48" height="48" rx="10" fill="#4f46e5"/>
+  <text x="24" y="32" font-family="Arial" font-size="24" font-weight="bold" text-anchor="middle" fill="#ffffff" style="font-style: italic;">f(x)</text>
+  <g fill="#ffffff" opacity="0.5">
+    <path d="M 8 8 L 12 8 L 12 9 L 9 9 L 9 12 L 8 12 Z"/>
+    <path d="M 40 8 L 36 8 L 36 9 L 39 9 L 39 12 L 40 12 Z"/>
+    <path d="M 8 40 L 12 40 L 12 39 L 9 39 L 9 36 L 8 36 Z"/>
+    <path d="M 40 40 L 36 40 L 36 39 L 39 39 L 39 36 L 40 36 Z"/>
+  </g>
+</svg>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coda Formula Customizer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="header-top">
+          <h1 class="title">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+              <path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path>
+            </svg>
+            Formula Customizer
+          </h1>
+          <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+            <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="content">
+
+      <!-- Live Preview Section -->
+      <section class="section">
+        <h2 class="section-title">Preview</h2>
+        <div class="preview-container">
+          <svg id="previewSvg" viewBox="0 0 200 120" class="preview-svg">
+            <!-- Modal background -->
+            <rect id="previewModal" x="10" y="10" width="180" height="100" rx="4" fill="var(--preview-modal)" stroke="var(--preview-border)" stroke-width="2"/>
+
+            <!-- Editor area -->
+            <rect id="previewEditor" x="15" y="20" width="120" height="85" rx="2" fill="var(--preview-editor)"/>
+
+            <!-- Documentation area -->
+            <rect id="previewDoc" x="140" y="20" width="45" height="85" rx="2" fill="var(--preview-doc)"/>
+
+            <!-- Labels -->
+            <text id="previewEditorText" x="75" y="65" text-anchor="middle" fill="var(--preview-text)" font-size="8" font-weight="500">Editor</text>
+            <text id="previewDocText" x="162" y="65" text-anchor="middle" fill="var(--preview-text)" font-size="7" font-weight="500">Doc</text>
+          </svg>
+        </div>
+      </section>
+
+      <!-- Presets Section -->
+      <section class="section">
+        <h2 class="section-title">Quick Presets</h2>
+        <div class="presets">
+          <button class="preset-btn" data-preset="default">
+            <svg class="preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+            </svg>
+            <span>Default</span>
+            <small>80% × 80%</small>
+          </button>
+          <button class="preset-btn" data-preset="medium">
+            <svg class="preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="20" rx="2"></rect>
+            </svg>
+            <span>Medium</span>
+            <small>90% × 90%</small>
+          </button>
+          <button class="preset-btn" data-preset="fullscreen">
+            <svg class="preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+            </svg>
+            <span>Fullscreen</span>
+            <small>95% × 95%</small>
+          </button>
+        </div>
+      </section>
+
+      <!-- Modal Size Section -->
+      <section class="section">
+        <h2 class="section-title">Modal Size</h2>
+
+        <div class="control-group">
+          <label class="label">
+            <span>Width</span>
+            <span class="value" id="widthValue">95%</span>
+          </label>
+          <input
+            type="range"
+            id="modalWidth"
+            class="slider"
+            min="50"
+            max="95"
+            value="95"
+          >
+        </div>
+
+        <div class="control-group">
+          <label class="label">
+            <span>Height</span>
+            <span class="value" id="heightValue">95%</span>
+          </label>
+          <input
+            type="range"
+            id="modalHeight"
+            class="slider"
+            min="50"
+            max="95"
+            value="95"
+          >
+        </div>
+      </section>
+
+      <!-- Editor Settings Section -->
+      <section class="section">
+        <h2 class="section-title">Editor Settings</h2>
+
+        <div class="control-group">
+          <label class="label">
+            <span>Font Size</span>
+            <span class="value" id="fontSizeValue">14px</span>
+          </label>
+          <input
+            type="range"
+            id="editorFontSize"
+            class="slider"
+            min="10"
+            max="24"
+            value="14"
+          >
+        </div>
+
+        <div class="control-group">
+          <label class="label">
+            <span>Line Height</span>
+            <span class="value" id="lineHeightValue">1.5</span>
+          </label>
+          <input
+            type="range"
+            id="editorLineHeight"
+            class="slider"
+            min="1.0"
+            max="2.5"
+            step="0.1"
+            value="1.5"
+          >
+        </div>
+
+        <div class="control-group">
+          <label class="label">
+            <span>Font Family</span>
+          </label>
+          <select id="editorFontFamily" class="select-control">
+            <option value="monospace">Monospace</option>
+            <option value="fira-code">Fira Code</option>
+            <option value="jetbrains-mono">JetBrains Mono</option>
+            <option value="source-code-pro">Source Code Pro</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label class="label">
+            <span>Editor Theme</span>
+          </label>
+          <select id="editorTheme" class="select-control">
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+
+        <div class="checkbox-wrapper">
+          <label class="checkbox-label">
+            <input type="checkbox" id="showLineNumbers" class="checkbox" checked>
+            <span class="checkbox-custom"></span>
+            <span>Show line numbers</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Documentation Section -->
+      <section class="section">
+        <h2 class="section-title">Documentation</h2>
+
+        <div class="checkbox-wrapper">
+          <label class="checkbox-label">
+            <input type="checkbox" id="showDocumentation" class="checkbox" checked>
+            <span class="checkbox-custom"></span>
+            <span>Show documentation</span>
+          </label>
+        </div>
+
+        <div id="documentationOptions" class="doc-options">
+          <label class="label">Documentation position</label>
+          <div class="position-grid">
+            <button class="position-btn" data-position="left" title="Left">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <rect x="2" y="3" width="8" height="18" rx="1"></rect>
+                <rect x="12" y="3" width="10" height="18" rx="1" opacity="0.3"></rect>
+              </svg>
+              <span>Left</span>
+            </button>
+            <button class="position-btn" data-position="right" title="Right">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <rect x="2" y="3" width="10" height="18" rx="1" opacity="0.3"></rect>
+                <rect x="14" y="3" width="8" height="18" rx="1"></rect>
+              </svg>
+              <span>Right</span>
+            </button>
+            <button class="position-btn" data-position="top" title="Top">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <rect x="3" y="2" width="18" height="8" rx="1"></rect>
+                <rect x="3" y="12" width="18" height="10" rx="1" opacity="0.3"></rect>
+              </svg>
+              <span>Top</span>
+            </button>
+            <button class="position-btn" data-position="bottom" title="Bottom">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <rect x="3" y="2" width="18" height="10" rx="1" opacity="0.3"></rect>
+                <rect x="3" y="14" width="18" height="8" rx="1"></rect>
+              </svg>
+              <span>Bottom</span>
+            </button>
+          </div>
+
+          <!-- Editor Proportion -->
+          <div class="control-group">
+            <label class="label">
+              <span>Editor proportion</span>
+              <span class="value" id="proportionValue">66%</span>
+            </label>
+            <input
+              type="range"
+              id="editorProportion"
+              class="slider"
+              min="30"
+              max="80"
+              value="66"
+            >
+            <div class="proportion-labels">
+              <span>More doc</span>
+              <span>More editor</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Actions -->
+      <section class="actions">
+        <button class="btn btn-secondary" id="resetBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+            <path d="M21 3v5h-5"></path>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+            <path d="M3 21v-5h5"></path>
+          </svg>
+          Reset
+        </button>
+        <button class="btn btn-primary" id="saveBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+          Save
+        </button>
+      </section>
+
+      <!-- Status Message -->
+      <div id="statusMessage" class="status-message"></div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Version 1.0.0 • <a href="https://github.com" target="_blank">Documentation</a></p>
+    </footer>
+  </div>
+
+  <script src="popup-bundle.js"></script>
+</body>
+</html>
