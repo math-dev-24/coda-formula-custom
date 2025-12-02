@@ -24,7 +24,6 @@ class PopupController {
     this.attachEventListeners();
     await this.loadCurrentConfig();
     this.updateUI();
-    this.updatePreview();
   }
 
   /**
@@ -34,12 +33,6 @@ class PopupController {
     this.elements = {
       // Theme
       themeToggle: document.getElementById('themeToggle'),
-
-      // Preview
-      previewModal: document.getElementById('previewModal'),
-      previewEditor: document.getElementById('previewEditor'),
-      previewDoc: document.getElementById('previewDoc'),
-      previewDocText: document.getElementById('previewDocText'),
 
       // Presets
       presetButtons: document.querySelectorAll('.preset-btn'),
@@ -57,7 +50,6 @@ class PopupController {
       lineHeightValue: document.getElementById('lineHeightValue'),
       editorFontFamily: document.getElementById('editorFontFamily'),
       editorTheme: document.getElementById('editorTheme'),
-      showLineNumbers: document.getElementById('showLineNumbers'),
 
       // Indent guides
       showIndentGuides: document.getElementById('showIndentGuides'),
@@ -91,15 +83,13 @@ class PopupController {
       btn.addEventListener('click', (e) => this.handlePresetClick(e));
     });
 
-    // Modal size sliders with live preview
+    // Modal size sliders
     this.elements.modalWidth.addEventListener('input', (e) => {
       this.elements.widthValue.textContent = `${e.target.value}%`;
-      this.updatePreview();
     });
 
     this.elements.modalHeight.addEventListener('input', (e) => {
       this.elements.heightValue.textContent = `${e.target.value}%`;
-      this.updatePreview();
     });
 
     // Editor settings
@@ -116,24 +106,21 @@ class PopupController {
       this.toggleIndentGuidesOptions(e.target.checked);
     });
 
-    // Documentation checkbox with live preview
+    // Documentation checkbox
     this.elements.showDocumentation.addEventListener('change', (e) => {
       this.toggleDocumentationOptions(e.target.checked);
-      this.updatePreview();
     });
 
-    // Position buttons with live preview
+    // Position buttons
     this.elements.positionButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
         this.handlePositionClick(e);
-        this.updatePreview();
       });
     });
 
-    // Editor proportion slider with live preview
+    // Editor proportion slider
     this.elements.editorProportion.addEventListener('input', (e) => {
       this.elements.proportionValue.textContent = `${e.target.value}%`;
-      this.updatePreview();
     });
 
     // Action buttons
@@ -199,7 +186,6 @@ class PopupController {
     this.elements.lineHeightValue.textContent = this.config.editorLineHeight || 1.5;
     this.elements.editorFontFamily.value = this.config.editorFontFamily || 'monospace';
     this.elements.editorTheme.value = this.config.editorTheme || 'light';
-    this.elements.showLineNumbers.checked = this.config.showLineNumbers !== false;
 
     // Indent guides
     this.elements.showIndentGuides.checked = this.config.showIndentGuides !== false;
@@ -327,7 +313,6 @@ class PopupController {
       editorLineHeight: parseFloat(this.elements.editorLineHeight.value),
       editorFontFamily: this.elements.editorFontFamily.value,
       editorTheme: this.elements.editorTheme.value,
-      showLineNumbers: this.elements.showLineNumbers.checked,
       showIndentGuides: this.elements.showIndentGuides.checked,
       indentGuideStyle: this.elements.indentGuideStyle.value,
       highlightActiveIndent: this.elements.highlightActiveIndent.checked
@@ -340,12 +325,20 @@ class PopupController {
   async handleSave() {
     const newConfig = this.getConfigFromUI();
 
+    // Check if documentation position changed
+    const positionChanged = this.config && this.config.documentationPosition !== newConfig.documentationPosition;
+
     const success = await StorageManager.saveConfig(newConfig);
 
     if (success) {
       this.config = newConfig;
       this.updatePresetButtons();
-      this.showStatus('Configuration sauvegardée avec succès !', 'success');
+
+      if (positionChanged) {
+        this.showStatus('Configuration sauvegardée ! Fermez et rouvrez l\'éditeur de formule pour appliquer la nouvelle position.', 'success');
+      } else {
+        this.showStatus('Configuration sauvegardée avec succès !', 'success');
+      }
     } else {
       this.showStatus('Erreur lors de la sauvegarde', 'error');
     }
@@ -407,125 +400,6 @@ class PopupController {
     localStorage.setItem('codaFormulaTheme', this.currentTheme);
   }
 
-  /**
-   * Update live preview based on current settings
-   */
-  updatePreview() {
-    const showDoc = this.elements.showDocumentation.checked;
-    const position = document.querySelector('.position-btn.active')?.dataset.position || 'right';
-    const modalWidth = parseInt(this.elements.modalWidth.value);
-    const modalHeight = parseInt(this.elements.modalHeight.value);
-    const editorProportion = parseInt(this.elements.editorProportion.value);
-    const docProportion = 100 - editorProportion;
-
-    // Base dimensions
-    const baseWidth = 180;
-    const baseHeight = 100;
-    const padding = 5;
-    const gap = 5;
-
-    // Calculate modal size based on percentage
-    const modalScaleW = modalWidth / 95;
-    const modalScaleH = modalHeight / 95;
-    const modalW = baseWidth * modalScaleW;
-    const modalH = baseHeight * modalScaleH;
-
-    // Update modal size
-    this.elements.previewModal.setAttribute('width', modalW);
-    this.elements.previewModal.setAttribute('height', modalH);
-
-    const contentX = 10 + padding;
-    const contentY = 10 + padding + 5; // +5 for header space
-    const contentW = modalW - (padding * 2);
-    const contentH = modalH - (padding * 2) - 5;
-
-    if (!showDoc) {
-      // Hide documentation
-      this.elements.previewEditor.setAttribute('x', contentX);
-      this.elements.previewEditor.setAttribute('y', contentY);
-      this.elements.previewEditor.setAttribute('width', contentW);
-      this.elements.previewEditor.setAttribute('height', contentH);
-      this.elements.previewDoc.setAttribute('width', 0);
-      this.elements.previewDoc.setAttribute('height', 0);
-      this.elements.previewDocText.style.display = 'none';
-    } else {
-      this.elements.previewDocText.style.display = 'block';
-
-      // Calculate proportions
-      const editorSize = editorProportion / 100;
-      const docSize = docProportion / 100;
-
-      if (position === 'left' || position === 'right') {
-        // Horizontal layout
-        const editorW = (contentW - gap) * editorSize;
-        const docW = (contentW - gap) * docSize;
-
-        if (position === 'left') {
-          // Doc on left
-          this.elements.previewDoc.setAttribute('x', contentX);
-          this.elements.previewDoc.setAttribute('y', contentY);
-          this.elements.previewDoc.setAttribute('width', docW);
-          this.elements.previewDoc.setAttribute('height', contentH);
-
-          this.elements.previewEditor.setAttribute('x', contentX + docW + gap);
-          this.elements.previewEditor.setAttribute('y', contentY);
-          this.elements.previewEditor.setAttribute('width', editorW);
-          this.elements.previewEditor.setAttribute('height', contentH);
-
-          this.elements.previewDocText.setAttribute('x', contentX + docW / 2);
-          this.elements.previewDocText.setAttribute('y', contentY + contentH / 2);
-        } else {
-          // Doc on right
-          this.elements.previewEditor.setAttribute('x', contentX);
-          this.elements.previewEditor.setAttribute('y', contentY);
-          this.elements.previewEditor.setAttribute('width', editorW);
-          this.elements.previewEditor.setAttribute('height', contentH);
-
-          this.elements.previewDoc.setAttribute('x', contentX + editorW + gap);
-          this.elements.previewDoc.setAttribute('y', contentY);
-          this.elements.previewDoc.setAttribute('width', docW);
-          this.elements.previewDoc.setAttribute('height', contentH);
-
-          this.elements.previewDocText.setAttribute('x', contentX + editorW + gap + docW / 2);
-          this.elements.previewDocText.setAttribute('y', contentY + contentH / 2);
-        }
-      } else {
-        // Vertical layout
-        const editorH = (contentH - gap) * editorSize;
-        const docH = (contentH - gap) * docSize;
-
-        if (position === 'top') {
-          // Doc on top
-          this.elements.previewDoc.setAttribute('x', contentX);
-          this.elements.previewDoc.setAttribute('y', contentY);
-          this.elements.previewDoc.setAttribute('width', contentW);
-          this.elements.previewDoc.setAttribute('height', docH);
-
-          this.elements.previewEditor.setAttribute('x', contentX);
-          this.elements.previewEditor.setAttribute('y', contentY + docH + gap);
-          this.elements.previewEditor.setAttribute('width', contentW);
-          this.elements.previewEditor.setAttribute('height', editorH);
-
-          this.elements.previewDocText.setAttribute('x', contentX + contentW / 2);
-          this.elements.previewDocText.setAttribute('y', contentY + docH / 2);
-        } else {
-          // Doc on bottom
-          this.elements.previewEditor.setAttribute('x', contentX);
-          this.elements.previewEditor.setAttribute('y', contentY);
-          this.elements.previewEditor.setAttribute('width', contentW);
-          this.elements.previewEditor.setAttribute('height', editorH);
-
-          this.elements.previewDoc.setAttribute('x', contentX);
-          this.elements.previewDoc.setAttribute('y', contentY + editorH + gap);
-          this.elements.previewDoc.setAttribute('width', contentW);
-          this.elements.previewDoc.setAttribute('height', docH);
-
-          this.elements.previewDocText.setAttribute('x', contentX + contentW / 2);
-          this.elements.previewDocText.setAttribute('y', contentY + editorH + gap + docH / 2);
-        }
-      }
-    }
-  }
 }
 
 // Initialize when DOM is ready

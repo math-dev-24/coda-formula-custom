@@ -117,17 +117,13 @@
 
     static async notifyConfigChange(config) {
       try {
-        console.log('[Coda Extension] Attempting to notify config change:', config);
         const tabs = await chrome.tabs.query({ url: '*://*.coda.io/d/*' });
-        console.log('[Coda Extension] Found tabs:', tabs.length);
         for (const tab of tabs) {
           chrome.tabs.sendMessage(tab.id, {
             type: 'CONFIG_UPDATE',
             config: config
-          }).then(() => {
-            console.log('[Coda Extension] Message sent to tab:', tab.id);
-          }).catch((error) => {
-            console.warn('[Coda Extension] Failed to send message to tab:', tab.id, error);
+          }).catch(() => {
+            // Ignore errors for tabs that don't have content script loaded
           });
         }
       } catch (error) {
@@ -137,9 +133,7 @@
 
     static onConfigChange(callback) {
       chrome.storage.onChanged.addListener((changes, areaName) => {
-        console.log('[Coda Extension] Storage changed:', areaName, changes);
         if (areaName === 'local' && changes[STORAGE_KEY]) {
-          console.log('[Coda Extension] Config key changed, triggering callback');
           const newConfig = mergeConfig(changes[STORAGE_KEY].newValue);
           callback(newConfig);
         }
@@ -166,6 +160,7 @@
       };
       this.styleElementId = 'coda-formula-editor-styles';
       this.indentGuideId = 'coda-indent-guides-styles';
+      this.indentObserver = null;
     }
 
     /**
@@ -307,19 +302,27 @@
         if (existingStyle) {
           existingStyle.remove();
         }
+        // Stop observing
+        this.stopIndentObserver();
+        // Remove data attributes
+        const lines = document.querySelectorAll('[data-indent-level], [data-indent-guides]');
+        lines.forEach(line => {
+          line.removeAttribute('data-indent-level');
+          line.removeAttribute('data-indent-guides');
+        });
         return;
       }
 
-      // Pastel rainbow colors for indent levels
+      // Pastel rainbow colors for indent levels (darker versions)
       const pastelColors = [
-        '#FFB3BA', // Pastel red
-        '#FFDFBA', // Pastel orange
-        '#FFFFBA', // Pastel yellow
-        '#BAFFC9', // Pastel green
-        '#BAE1FF', // Pastel blue
-        '#E0BBE4', // Pastel purple
-        '#FFC8DD', // Pastel pink
-        '#D4A5A5'  // Pastel brown
+        'rgba(255, 120, 130, 0.8)', // Darker pastel red
+        'rgba(255, 180, 120, 0.8)', // Darker pastel orange
+        'rgba(240, 220, 100, 0.8)', // Darker pastel yellow
+        'rgba(120, 220, 150, 0.8)', // Darker pastel green
+        'rgba(120, 180, 255, 0.8)', // Darker pastel blue
+        'rgba(200, 140, 210, 0.8)', // Darker pastel purple
+        'rgba(255, 150, 190, 0.8)', // Darker pastel pink
+        'rgba(180, 130, 130, 0.8)'  // Darker pastel brown
       ];
 
       // Map style option to CSS border-style
@@ -332,47 +335,54 @@
 
       // Build CSS for indent guides
       let css = `
-        /* Indent guides for Slate.js editor */
+        /* Indent guides for Coda formula editor */
         .kr-slate-editor .kr-line,
-        .kr-slate-editor .kr-paragraph,
-        .kr-slate-editor div[data-slate-node="element"] {
+        .kr-slate-editor .kr-paragraph {
           position: relative;
+        }
+
+        /* Base indent guide styling */
+        .kr-slate-editor .kr-line[data-indent-guides]::before,
+        .kr-slate-editor .kr-paragraph[data-indent-guides]::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          pointer-events: none;
+          z-index: 0;
         }
       `;
 
       // Generate CSS for each indent level (up to 8 levels)
       for (let i = 0; i < pastelColors.length; i++) {
-        const indentLevel = i + 1;
         const color = pastelColors[i];
-        const paddingLeft = indentLevel * 20; // 20px per indent level
+        const indentLevel = i + 1;
+
+        // Create visual guides for each indent level
+        // Each indent level is 2 spaces, and each character is roughly 0.6em in monospace
+        const guides = [];
+        const offset = -0.4; // Offset to shift guides 4px to the left (roughly -0.24em)
+        for (let j = 1; j <= indentLevel; j++) {
+          const position = (j * 2 - 1) * 0.6 + offset; // Position at 1st, 3rd, 5th space etc, shifted left
+          guides.push(`linear-gradient(to right, transparent ${position}em, ${pastelColors[j-1]} ${position}em, ${pastelColors[j-1]} calc(${position}em + 1px), transparent calc(${position}em + 1px))`);
+        }
 
         css += `
-        /* Indent level ${indentLevel} */
-        .kr-slate-editor .kr-line[style*="padding-left: ${paddingLeft}px"]::before,
-        .kr-slate-editor .kr-paragraph[style*="padding-left: ${paddingLeft}px"]::before {
-          content: '';
-          position: absolute;
-          left: ${(indentLevel - 1) * 20 + 10}px;
-          top: 0;
-          bottom: 0;
-          width: 0;
-          border-left: 1px ${borderStyle} ${color};
-          opacity: 0.6;
-          pointer-events: none;
-          z-index: 0;
+        /* Indent level ${indentLevel} (${indentLevel * 2} spaces) */
+        .kr-slate-editor .kr-line[data-indent-level="${indentLevel}"]::before,
+        .kr-slate-editor .kr-paragraph[data-indent-level="${indentLevel}"]::before {
+          background-image: ${guides.join(', ')};
+          width: 100%;
+          opacity: ${config.highlightActiveIndent ? '0.7' : '0.5'};
         }
         `;
 
-        // Highlight active indent scope if enabled
         if (config.highlightActiveIndent) {
           css += `
-        .kr-slate-editor .kr-line[style*="padding-left: ${paddingLeft}px"]:hover::before,
-        .kr-slate-editor .kr-paragraph[style*="padding-left: ${paddingLeft}px"]:hover::before,
-        .kr-slate-editor .kr-line[style*="padding-left: ${paddingLeft}px"]:focus-within::before,
-        .kr-slate-editor .kr-paragraph[style*="padding-left: ${paddingLeft}px"]:focus-within::before {
-          border-left-width: 2px;
+        .kr-slate-editor .kr-line[data-indent-level="${indentLevel}"]:hover::before,
+        .kr-slate-editor .kr-paragraph[data-indent-level="${indentLevel}"]:hover::before {
           opacity: 1;
-          border-left-color: ${color};
         }
         `;
         }
@@ -386,6 +396,76 @@
         document.head.appendChild(styleElement);
       }
       styleElement.textContent = css;
+
+      // Add dynamic indent level detection
+      this.updateIndentLevels();
+
+      // Start observing editor changes
+      this.startIndentObserver();
+    }
+
+    /**
+     * Dynamically detect and mark indent levels on lines
+     */
+    updateIndentLevels() {
+      const editors = document.querySelectorAll('.kr-slate-editor');
+
+      editors.forEach(editor => {
+        const lines = editor.querySelectorAll('.kr-line, .kr-paragraph');
+
+        lines.forEach(line => {
+          const firstSpan = line.querySelector('.kr-span:first-child');
+          if (!firstSpan) return;
+
+          const text = firstSpan.textContent || '';
+          const leadingSpaces = text.match(/^(\s*)/)[0].length;
+          const indentLevel = Math.floor(leadingSpaces / 2);
+
+          if (indentLevel > 0 && indentLevel <= 8) {
+            line.setAttribute('data-indent-level', indentLevel);
+            line.setAttribute('data-indent-guides', 'true');
+          } else {
+            line.removeAttribute('data-indent-level');
+            line.removeAttribute('data-indent-guides');
+          }
+        });
+      });
+    }
+
+    /**
+     * Start observing the editor for changes to update indent guides
+     */
+    startIndentObserver() {
+      // Stop existing observer if any
+      if (this.indentObserver) {
+        this.indentObserver.disconnect();
+      }
+
+      // Create new observer
+      this.indentObserver = new MutationObserver(() => {
+        this.updateIndentLevels();
+      });
+
+      // Observe all editors
+      const editors = document.querySelectorAll('.kr-slate-editor');
+      editors.forEach(editor => {
+        this.indentObserver.observe(editor, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+          characterDataOldValue: false
+        });
+      });
+    }
+
+    /**
+     * Stop observing editor changes
+     */
+    stopIndentObserver() {
+      if (this.indentObserver) {
+        this.indentObserver.disconnect();
+        this.indentObserver = null;
+      }
     }
 
     /**
@@ -435,11 +515,25 @@
      * Find target container for layout manipulation
      */
     findTargetContainer(rootDiv) {
-      try {
-        return rootDiv.querySelector(':scope > div:nth-child(3) > div:last-child > div:last-child');
-      } catch (e) {
-        return this.findTargetContainerFallback(rootDiv);
+      // First, try to find by our marker attribute
+      let target = rootDiv.querySelector('[data-coda-formula-target="true"]');
+
+      if (!target) {
+        // If not found, use the selector and mark it
+        try {
+          target = rootDiv.querySelector(':scope > div:nth-child(3) > div:last-child > div:last-child');
+          if (target) {
+            target.dataset.codaFormulaTarget = 'true';
+          }
+        } catch (e) {
+          target = this.findTargetContainerFallback(rootDiv);
+          if (target) {
+            target.dataset.codaFormulaTarget = 'true';
+          }
+        }
       }
+
+      return target;
     }
 
     /**
@@ -492,13 +586,13 @@
     /**
      * Apply layout based on documentation visibility
      */
-    applyLayout(target, kids, formulaDiv, config) {
+    applyLayout(kids, formulaDiv, config) {
       if (kids.length < 2) return;
 
       if (!config.showDocumentation) {
         this.hideDocumentation(kids);
       } else {
-        this.showDocumentation(target, kids, formulaDiv, config);
+        this.showDocumentation(kids, formulaDiv, config);
       }
     }
 
@@ -506,8 +600,12 @@
      * Hide documentation panel
      */
     hideDocumentation(kids) {
-      kids.forEach((child, index) => {
-        if (index > 0) {
+      // Hide all children except the formula editor
+      kids.forEach((child) => {
+        // Check if this is the formula editor
+        const isFormulaEditor = child.querySelector('[data-coda-ui-id="formula-editor"]') ||
+                                child.dataset.codaUiId === 'formula-editor';
+        if (!isFormulaEditor) {
           child.style.display = 'none';
         }
       });
@@ -516,28 +614,14 @@
     /**
      * Show documentation with proper layout
      */
-    showDocumentation(target, kids, formulaDiv, config) {
+    showDocumentation(kids, formulaDiv, config) {
+      if (kids.length < 2) return;
+
       const mainChild = formulaDiv;
       const sideChild = kids[kids.length - 1];
 
-      // Hide intermediate children
-      this.hideIntermediateChildren(kids);
-
-      // Make side child visible
-      sideChild.style.display = '';
-      sideChild.style.height = '100%';
-
-      // Create and configure flex wrapper
-      const flexWrapper = this.createFlexWrapper();
-      mainChild.parentElement.insertBefore(flexWrapper, mainChild);
-
-      // Arrange children based on position
-      this.arrangeChildren(flexWrapper, mainChild, sideChild, config);
-
-      // Apply flex sizing
-      mainChild.style.flex = `${config.editorProportion} 1 0`;
-      sideChild.style.flex = `${config.documentationProportion} 1 0`;
-      sideChild.style.overflow = 'auto';
+      // Always create a new flex wrapper (simpler and more reliable)
+      this.createFlexWrapper(kids, mainChild, sideChild, config);
 
       // Adjust and observe side child
       this.adjustSideChildLayout(sideChild);
@@ -545,33 +629,104 @@
     }
 
     /**
-     * Hide intermediate children between editor and documentation
+     * Update existing flex wrapper with new configuration
      */
-    hideIntermediateChildren(kids) {
+    updateFlexWrapper(wrapper, mainChild, sideChild, config) {
+      const position = config.documentationPosition;
+      const borderColor = '1px solid rgb(240, 240, 240)';
+
+      // Hide all intermediate children (keep only first and last)
+      const parent = wrapper.parentElement;
+      if (parent) {
+        const allChildren = Array.from(parent.children);
+        if (allChildren.length > 2) {
+          for (let i = 1; i < allChildren.length - 1; i++) {
+            if (allChildren[i] !== wrapper) {
+              allChildren[i].style.display = 'none';
+            }
+          }
+        }
+      }
+
+      // Make sure side child is visible
+      sideChild.style.display = '';
+      sideChild.style.height = '100%';
+
+      // Clear all borders first
+      sideChild.style.borderTop = 'none';
+      sideChild.style.borderBottom = 'none';
+      sideChild.style.borderLeft = 'none';
+      sideChild.style.borderRight = 'none';
+
+      // Configure layout based on position
+      if (position === 'left' || position === 'right') {
+        wrapper.style.flexDirection = 'row';
+
+        if (position === 'left') {
+          // Doc on left, editor on right
+          sideChild.style.borderRight = borderColor;
+          // Reorder if needed
+          if (wrapper.firstChild !== sideChild) {
+            wrapper.insertBefore(sideChild, mainChild);
+          }
+        } else {
+          // Editor on left, doc on right
+          sideChild.style.borderLeft = borderColor;
+          // Reorder if needed
+          if (wrapper.lastChild !== sideChild) {
+            wrapper.appendChild(sideChild);
+          }
+        }
+      } else {
+        wrapper.style.flexDirection = 'column';
+
+        if (position === 'top') {
+          // Doc on top, editor on bottom
+          sideChild.style.borderBottom = borderColor;
+          // Reorder if needed
+          if (wrapper.firstChild !== sideChild) {
+            wrapper.insertBefore(sideChild, mainChild);
+          }
+        } else {
+          // Editor on top, doc on bottom
+          sideChild.style.borderTop = borderColor;
+          // Reorder if needed
+          if (wrapper.lastChild !== sideChild) {
+            wrapper.appendChild(sideChild);
+          }
+        }
+      }
+
+      // Apply flex sizing based on proportions
+      mainChild.style.flex = `${config.editorProportion} 1 0`;
+      sideChild.style.flex = `${config.documentationProportion} 1 0`;
+      sideChild.style.overflow = 'auto';
+    }
+
+    /**
+     * Create new flex wrapper
+     */
+    createFlexWrapper(kids, mainChild, sideChild, config) {
+      // Hide intermediate children (if there are more than 2)
       if (kids.length > 2) {
         for (let i = 1; i < kids.length - 1; i++) {
           kids[i].style.display = 'none';
         }
       }
-    }
 
-    /**
-     * Create flex wrapper container
-     */
-    createFlexWrapper() {
+      // Make sure side child is visible
+      sideChild.style.display = '';
+      sideChild.style.height = '100%';
+
+      // Create a flex wrapper to hold main + side
       const flexWrapper = document.createElement('div');
       flexWrapper.style.display = 'flex';
       flexWrapper.style.width = '100%';
       flexWrapper.style.height = '100%';
       flexWrapper.style.boxSizing = 'border-box';
       flexWrapper.style.gap = '0px';
-      return flexWrapper;
-    }
 
-    /**
-     * Arrange children in flex wrapper based on position
-     */
-    arrangeChildren(flexWrapper, mainChild, sideChild, config) {
+      // Configure layout based on position
       const position = config.documentationPosition;
       const borderColor = '1px solid rgb(240, 240, 240)';
 
@@ -579,13 +734,17 @@
         flexWrapper.style.flexDirection = 'row';
 
         if (position === 'left') {
+          // Doc on left, editor on right
           sideChild.style.borderRight = borderColor;
           sideChild.style.borderLeft = 'none';
+          mainChild.parentElement.insertBefore(flexWrapper, mainChild);
           flexWrapper.appendChild(sideChild);
           flexWrapper.appendChild(mainChild);
         } else {
+          // Editor on left, doc on right
           sideChild.style.borderLeft = borderColor;
           sideChild.style.borderRight = 'none';
+          mainChild.parentElement.insertBefore(flexWrapper, mainChild);
           flexWrapper.appendChild(mainChild);
           flexWrapper.appendChild(sideChild);
         }
@@ -593,18 +752,28 @@
         flexWrapper.style.flexDirection = 'column';
 
         if (position === 'top') {
+          // Doc on top, editor on bottom
           sideChild.style.borderBottom = borderColor;
           sideChild.style.borderTop = 'none';
+          mainChild.parentElement.insertBefore(flexWrapper, mainChild);
           flexWrapper.appendChild(sideChild);
           flexWrapper.appendChild(mainChild);
         } else {
+          // Editor on top, doc on bottom
           sideChild.style.borderTop = borderColor;
           sideChild.style.borderBottom = 'none';
+          mainChild.parentElement.insertBefore(flexWrapper, mainChild);
           flexWrapper.appendChild(mainChild);
           flexWrapper.appendChild(sideChild);
         }
       }
+
+      // Apply flex sizing based on proportions
+      mainChild.style.flex = `${config.editorProportion} 1 0`;
+      sideChild.style.flex = `${config.documentationProportion} 1 0`;
+      sideChild.style.overflow = 'auto';
     }
+
 
     /**
      * Adjust side child layout to remove max-height constraints
@@ -648,19 +817,20 @@
      * Reset layout - remove flex wrappers and restore original state
      */
     resetLayout(target) {
-      // Find and remove all flex wrappers (more aggressive search)
+      // Find and remove all flex wrappers
       const allDivs = Array.from(target.children);
-      allDivs.forEach(div => {
+      allDivs.forEach((div) => {
+        const computedStyle = getComputedStyle(div);
+
         // Check if it's a wrapper div we created (has flex display)
         const hasFlexDisplay = div.style.display === 'flex' ||
-                               getComputedStyle(div).display === 'flex';
+                               computedStyle.display === 'flex';
         const hasFlexDirection = div.style.flexDirection === 'row' ||
                                  div.style.flexDirection === 'column' ||
-                                 getComputedStyle(div).flexDirection === 'row' ||
-                                 getComputedStyle(div).flexDirection === 'column';
+                                 computedStyle.flexDirection === 'row' ||
+                                 computedStyle.flexDirection === 'column';
 
         if (hasFlexDisplay && hasFlexDirection && div.children.length > 0) {
-          console.log('[Coda Extension] Removing flex wrapper');
           // Move children back to target
           while (div.firstChild) {
             target.appendChild(div.firstChild);
@@ -669,9 +839,9 @@
         }
       });
 
-      // Reset all children styles
+      // Reset all children styles (including display)
       const kids = Array.from(target.children);
-      kids.forEach(child => {
+      kids.forEach((child) => {
         this.styleManager.resetStyles(child);
       });
 
@@ -723,25 +893,20 @@
       target.style.height = 'auto';
 
       const kids = Array.from(target.children);
-      this.layoutManager.applyLayout(target, kids, formulaDiv, this.config);
+      this.layoutManager.applyLayout(kids, formulaDiv, this.config);
     }
 
     /**
      * Reset a dialog to original state
      */
     resetDialog(dialog) {
-      console.log('[Coda Extension] Resetting dialog');
       delete dialog.dataset.codaFormulaDialogPatched;
 
       const rootDiv = this.domSelector.findRootDiv(dialog);
-      if (!rootDiv) {
-        console.log('[Coda Extension] No rootDiv found');
-        return;
-      }
+      if (!rootDiv) return;
 
       try {
         // Reset modal size
-        console.log('[Coda Extension] Resetting modal size');
         rootDiv.style.width = '';
         rootDiv.style.height = '';
         rootDiv.style.maxWidth = '';
@@ -749,11 +914,8 @@
 
         const target = this.domSelector.findTargetContainer(rootDiv);
         if (target) {
-          console.log('[Coda Extension] Resetting target layout');
           delete target.dataset.codaFormulaLayoutPatched;
           this.layoutManager.resetLayout(target);
-        } else {
-          console.log('[Coda Extension] No target container found');
         }
       } catch (e) {
         console.error('[Coda Extension] Error cleaning up:', e);
@@ -790,13 +952,11 @@
      * Update configuration and re-process dialogs
      */
     updateConfig(newConfig) {
-      console.log('[Coda Extension] Updating config in ModalCustomizer:', newConfig);
       this.config = newConfig;
       this.dialogProcessor = new DialogProcessor(newConfig);
 
       // Reset all existing dialogs
       const dialogs = this.domSelector.findDialogs();
-      console.log('[Coda Extension] Found dialogs to reset:', dialogs.length);
       dialogs.forEach(dialog => {
         this.dialogProcessor.resetDialog(dialog);
       });
@@ -804,7 +964,6 @@
       // Clear processed dialogs and re-process
       this.processedDialogs = new WeakSet();
       this.processDialogs();
-      console.log('[Coda Extension] Config update complete');
     }
 
     /**
@@ -875,18 +1034,14 @@
       openDyslexicLink.href = 'https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/open-dyslexic.min.css';
       document.head.appendChild(openDyslexicLink);
 
-      console.log('[Coda Formula Customizer] Google Fonts and OpenDyslexic loaded');
     }
 
     async init() {
       try {
-        console.log('[Coda Formula Customizer] Initializing...');
-        
         // Load Google Fonts first
         this.loadGoogleFonts();
-        
+
         const config = await StorageManager.getConfig();
-        console.log('[Coda Formula Customizer] Configuration loaded:', config);
 
         this.customizer = new ModalCustomizer(config);
 
@@ -900,8 +1055,6 @@
 
         this.listenForConfigChanges();
         this.listenForMessages();
-
-        console.log('[Coda Formula Customizer] Initialized successfully');
       } catch (error) {
         console.error('[Coda Formula Customizer] Initialization error:', error);
       }
@@ -909,7 +1062,6 @@
 
     listenForConfigChanges() {
       StorageManager.onConfigChange((newConfig) => {
-        console.log('[Coda Formula Customizer] Config changed:', newConfig);
         if (this.customizer) {
           this.customizer.updateConfig(newConfig);
         }
@@ -918,7 +1070,6 @@
 
     listenForMessages() {
       chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        console.log('[Coda Formula Customizer] Message received:', message);
         if (message.type === 'CONFIG_UPDATE') {
           if (this.customizer) {
             this.customizer.updateConfig(message.config);
