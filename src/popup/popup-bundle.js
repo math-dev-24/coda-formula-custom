@@ -454,7 +454,7 @@
         this.config = newConfig;
         this.updatePresetButtons();
         this.showStatus(
-          "Configuration saved! Close and reopen the formula to apply all changes.",
+          "Configuration saved! Reload Page thx.",
           "success"
         );
       } else {
