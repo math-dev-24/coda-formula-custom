@@ -30,7 +30,56 @@ export class ModalCustomizer {
     this.config = newConfig;
     // Clear processed dialogs to allow reprocessing
     this.processedDialogs = new WeakSet();
+    // Reset all dialogs to initial state before reprocessing
+    this.resetAllDialogs();
     this.processDialogs();
+  }
+
+  /**
+   * Reset all dialogs to their initial state
+   */
+  resetAllDialogs() {
+    const dialogs = document.querySelectorAll('div[data-coda-ui-id="dialog"][role="dialog"]');
+
+    dialogs.forEach(dialog => {
+      const formulaDiv = dialog.querySelector('div[data-coda-ui-id="formula-editor"]');
+      if (!formulaDiv) return;
+
+      const rootDiv = dialog.querySelector(':scope > div');
+      if (!rootDiv) return;
+
+      const target = this.getTargetContainer(rootDiv);
+      if (!target) return;
+
+      // Remove any flex wrapper we created
+      const flexWrapper = target.querySelector(':scope > div[style*="display: flex"]');
+      if (flexWrapper) {
+        // Move children back to target
+        while (flexWrapper.firstChild) {
+          target.appendChild(flexWrapper.firstChild);
+        }
+        flexWrapper.remove();
+      }
+
+      // Reset all children visibility and styles
+      const kids = Array.from(target.children);
+      kids.forEach(child => {
+        child.style.display = '';
+        child.style.flex = '';
+        child.style.overflow = '';
+        child.style.height = '';
+        child.style.borderLeft = '';
+        child.style.borderRight = '';
+        child.style.borderTop = '';
+        child.style.borderBottom = '';
+      });
+
+      // Reset modal size to auto
+      rootDiv.style.width = '';
+      rootDiv.style.height = '';
+      rootDiv.style.maxWidth = '';
+      rootDiv.style.maxHeight = '';
+    });
   }
 
   /**

@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Coda Formula Customizer",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Custom you editor",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "tabs"
   ],
   "action": {
     "default_popup": "src/popup/popup.html",

@@ -117,12 +117,18 @@
 
     static async notifyConfigChange(config) {
       try {
+        console.log('[Coda Extension] Attempting to notify config change:', config);
         const tabs = await chrome.tabs.query({ url: '*://*.coda.io/d/*' });
+        console.log('[Coda Extension] Found tabs:', tabs.length);
         for (const tab of tabs) {
           chrome.tabs.sendMessage(tab.id, {
             type: 'CONFIG_UPDATE',
             config: config
-          }).catch(() => {});
+          }).then(() => {
+            console.log('[Coda Extension] Message sent to tab:', tab.id);
+          }).catch((error) => {
+            console.warn('[Coda Extension] Failed to send message to tab:', tab.id, error);
+          });
         }
       } catch (error) {
         console.error('[Coda Extension] Error notifying config change:', error);
@@ -131,7 +137,9 @@
 
     static onConfigChange(callback) {
       chrome.storage.onChanged.addListener((changes, areaName) => {
+        console.log('[Coda Extension] Storage changed:', areaName, changes);
         if (areaName === 'local' && changes[STORAGE_KEY]) {
+          console.log('[Coda Extension] Config key changed, triggering callback');
           const newConfig = mergeConfig(changes[STORAGE_KEY].newValue);
           callback(newConfig);
         }
@@ -386,7 +394,7 @@
     resetStyles(element) {
       const stylesToReset = ['display', 'flex', 'overflow', 'order',
                             'borderLeft', 'borderRight', 'borderTop', 'borderBottom',
-                            'flexDirection', 'height'];
+                            'flexDirection', 'height', 'width', 'maxWidth', 'maxHeight'];
       stylesToReset.forEach(prop => {
         element.style[prop] = '';
       });
@@ -640,19 +648,28 @@
      * Reset layout - remove flex wrappers and restore original state
      */
     resetLayout(target) {
-      const allDivs = target.querySelectorAll(':scope > div');
+      // Find and remove all flex wrappers (more aggressive search)
+      const allDivs = Array.from(target.children);
       allDivs.forEach(div => {
-        if (div.style.display === 'flex' &&
-            (div.style.flexDirection === 'row' || div.style.flexDirection === 'column')) {
-          const parent = div.parentElement;
+        // Check if it's a wrapper div we created (has flex display)
+        const hasFlexDisplay = div.style.display === 'flex' ||
+                               getComputedStyle(div).display === 'flex';
+        const hasFlexDirection = div.style.flexDirection === 'row' ||
+                                 div.style.flexDirection === 'column' ||
+                                 getComputedStyle(div).flexDirection === 'row' ||
+                                 getComputedStyle(div).flexDirection === 'column';
+
+        if (hasFlexDisplay && hasFlexDirection && div.children.length > 0) {
+          console.log('[Coda Extension] Removing flex wrapper');
+          // Move children back to target
           while (div.firstChild) {
-            parent.insertBefore(div.firstChild, div);
+            target.appendChild(div.firstChild);
           }
           div.remove();
         }
       });
 
-      // Reset children styles
+      // Reset all children styles
       const kids = Array.from(target.children);
       kids.forEach(child => {
         this.styleManager.resetStyles(child);
@@ -713,16 +730,30 @@
      * Reset a dialog to original state
      */
     resetDialog(dialog) {
+      console.log('[Coda Extension] Resetting dialog');
       delete dialog.dataset.codaFormulaDialogPatched;
 
       const rootDiv = this.domSelector.findRootDiv(dialog);
-      if (!rootDiv) return;
+      if (!rootDiv) {
+        console.log('[Coda Extension] No rootDiv found');
+        return;
+      }
 
       try {
+        // Reset modal size
+        console.log('[Coda Extension] Resetting modal size');
+        rootDiv.style.width = '';
+        rootDiv.style.height = '';
+        rootDiv.style.maxWidth = '';
+        rootDiv.style.maxHeight = '';
+
         const target = this.domSelector.findTargetContainer(rootDiv);
         if (target) {
+          console.log('[Coda Extension] Resetting target layout');
           delete target.dataset.codaFormulaLayoutPatched;
           this.layoutManager.resetLayout(target);
+        } else {
+          console.log('[Coda Extension] No target container found');
         }
       } catch (e) {
         console.error('[Coda Extension] Error cleaning up:', e);
@@ -759,11 +790,13 @@
      * Update configuration and re-process dialogs
      */
     updateConfig(newConfig) {
+      console.log('[Coda Extension] Updating config in ModalCustomizer:', newConfig);
       this.config = newConfig;
       this.dialogProcessor = new DialogProcessor(newConfig);
 
       // Reset all existing dialogs
       const dialogs = this.domSelector.findDialogs();
+      console.log('[Coda Extension] Found dialogs to reset:', dialogs.length);
       dialogs.forEach(dialog => {
         this.dialogProcessor.resetDialog(dialog);
       });
@@ -771,6 +804,7 @@
       // Clear processed dialogs and re-process
       this.processedDialogs = new WeakSet();
       this.processDialogs();
+      console.log('[Coda Extension] Config update complete');
     }
 
     /**
