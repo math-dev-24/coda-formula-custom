@@ -20,6 +20,7 @@ class PopupController {
   async init() {
     this.cacheElements();
     this.loadTheme();
+    this.initAccordion();
     this.attachEventListeners();
     await this.loadCurrentConfig();
     this.updateUI();
@@ -48,6 +49,21 @@ class PopupController {
       modalHeight: document.getElementById('modalHeight'),
       widthValue: document.getElementById('widthValue'),
       heightValue: document.getElementById('heightValue'),
+
+      // Editor settings
+      editorFontSize: document.getElementById('editorFontSize'),
+      fontSizeValue: document.getElementById('fontSizeValue'),
+      editorLineHeight: document.getElementById('editorLineHeight'),
+      lineHeightValue: document.getElementById('lineHeightValue'),
+      editorFontFamily: document.getElementById('editorFontFamily'),
+      editorTheme: document.getElementById('editorTheme'),
+      showLineNumbers: document.getElementById('showLineNumbers'),
+
+      // Indent guides
+      showIndentGuides: document.getElementById('showIndentGuides'),
+      indentGuidesOptions: document.getElementById('indentGuidesOptions'),
+      indentGuideStyle: document.getElementById('indentGuideStyle'),
+      highlightActiveIndent: document.getElementById('highlightActiveIndent'),
 
       // Documentation
       showDocumentation: document.getElementById('showDocumentation'),
@@ -86,6 +102,20 @@ class PopupController {
       this.updatePreview();
     });
 
+    // Editor settings
+    this.elements.editorFontSize.addEventListener('input', (e) => {
+      this.elements.fontSizeValue.textContent = `${e.target.value}px`;
+    });
+
+    this.elements.editorLineHeight.addEventListener('input', (e) => {
+      this.elements.lineHeightValue.textContent = e.target.value;
+    });
+
+    // Indent guides checkbox
+    this.elements.showIndentGuides.addEventListener('change', (e) => {
+      this.toggleIndentGuidesOptions(e.target.checked);
+    });
+
     // Documentation checkbox with live preview
     this.elements.showDocumentation.addEventListener('change', (e) => {
       this.toggleDocumentationOptions(e.target.checked);
@@ -112,6 +142,38 @@ class PopupController {
   }
 
   /**
+   * Initialize accordion functionality
+   */
+  initAccordion() {
+    const accordionHeaders = document.querySelectorAll('.accordion-header');
+
+    accordionHeaders.forEach(header => {
+      header.addEventListener('click', () => {
+        const accordionId = header.dataset.accordion;
+        const content = document.querySelector(`[data-accordion-content="${accordionId}"]`);
+        const isOpen = header.classList.contains('active');
+
+        // Toggle current accordion
+        if (isOpen) {
+          header.classList.remove('active');
+          content.classList.remove('open');
+        } else {
+          header.classList.add('active');
+          content.classList.add('open');
+        }
+      });
+    });
+
+    // Open first accordion by default (Editor Settings)
+    const firstHeader = document.querySelector('[data-accordion="editor"]');
+    const firstContent = document.querySelector('[data-accordion-content="editor"]');
+    if (firstHeader && firstContent) {
+      firstHeader.classList.add('active');
+      firstContent.classList.add('open');
+    }
+  }
+
+  /**
    * Load current configuration
    */
   async loadCurrentConfig() {
@@ -130,6 +192,21 @@ class PopupController {
     this.elements.widthValue.textContent = `${this.config.modalWidth}%`;
     this.elements.heightValue.textContent = `${this.config.modalHeight}%`;
 
+    // Editor settings
+    this.elements.editorFontSize.value = this.config.editorFontSize || 14;
+    this.elements.fontSizeValue.textContent = `${this.config.editorFontSize || 14}px`;
+    this.elements.editorLineHeight.value = this.config.editorLineHeight || 1.5;
+    this.elements.lineHeightValue.textContent = this.config.editorLineHeight || 1.5;
+    this.elements.editorFontFamily.value = this.config.editorFontFamily || 'monospace';
+    this.elements.editorTheme.value = this.config.editorTheme || 'light';
+    this.elements.showLineNumbers.checked = this.config.showLineNumbers !== false;
+
+    // Indent guides
+    this.elements.showIndentGuides.checked = this.config.showIndentGuides !== false;
+    this.toggleIndentGuidesOptions(this.config.showIndentGuides !== false);
+    this.elements.indentGuideStyle.value = this.config.indentGuideStyle || 'dotted';
+    this.elements.highlightActiveIndent.checked = this.config.highlightActiveIndent !== false;
+
     // Documentation
     this.elements.showDocumentation.checked = this.config.showDocumentation;
     this.toggleDocumentationOptions(this.config.showDocumentation);
@@ -143,6 +220,18 @@ class PopupController {
 
     // Check if current config matches a preset
     this.updatePresetButtons();
+  }
+
+  /**
+   * Toggle indent guides options visibility
+   * @param {boolean} show - Whether to show the options
+   */
+  toggleIndentGuidesOptions(show) {
+    if (show) {
+      this.elements.indentGuidesOptions.classList.remove('hidden');
+    } else {
+      this.elements.indentGuidesOptions.classList.add('hidden');
+    }
   }
 
   /**
@@ -233,7 +322,15 @@ class PopupController {
       modalHeight: parseInt(this.elements.modalHeight.value),
       showDocumentation: this.elements.showDocumentation.checked,
       documentationPosition: selectedPosition ? selectedPosition.dataset.position : 'right',
-      editorProportion: parseInt(this.elements.editorProportion.value)
+      editorProportion: parseInt(this.elements.editorProportion.value),
+      editorFontSize: parseInt(this.elements.editorFontSize.value),
+      editorLineHeight: parseFloat(this.elements.editorLineHeight.value),
+      editorFontFamily: this.elements.editorFontFamily.value,
+      editorTheme: this.elements.editorTheme.value,
+      showLineNumbers: this.elements.showLineNumbers.checked,
+      showIndentGuides: this.elements.showIndentGuides.checked,
+      indentGuideStyle: this.elements.indentGuideStyle.value,
+      highlightActiveIndent: this.elements.highlightActiveIndent.checked
     };
   }
 

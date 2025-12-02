@@ -19,8 +19,10 @@
     editorFontSize: 14,
     editorLineHeight: 1.5,
     editorFontFamily: "monospace",
-    showLineNumbers: true,
     editorTheme: "light",
+    showIndentGuides: true,
+    indentGuideStyle: "dotted",
+    highlightActiveIndent: true,
     presets: {
       default: { modalWidth: 80, modalHeight: 80, editorProportion: 66 },
       medium: { modalWidth: 90, modalHeight: 90, editorProportion: 60 },
@@ -51,14 +53,29 @@
       "fira-code",
       "jetbrains-mono",
       "source-code-pro",
+      "opendyslexic",
     ];
     if (
       config.editorFontFamily &&
       !validFonts.includes(config.editorFontFamily)
     )
       return false;
-    const validThemes = ["light", "dark"];
+    const validThemes = [
+      "light",
+      "dark",
+      "sepia",
+      "high-contrast",
+      "protanopia",
+      "deuteranopia",
+      "tritanopia",
+    ];
     if (config.editorTheme && !validThemes.includes(config.editorTheme))
+      return false;
+    const validIndentStyles = ["solid", "dotted", "dashed"];
+    if (
+      config.indentGuideStyle &&
+      !validIndentStyles.includes(config.indentGuideStyle)
+    )
       return false;
     return true;
   }
@@ -155,6 +172,7 @@
     async init() {
       this.cacheElements();
       this.loadTheme();
+      this.initAccordion();
       this.attachEventListeners();
       await this.loadCurrentConfig();
       this.updateUI();
@@ -180,7 +198,10 @@
         lineHeightValue: document.getElementById("lineHeightValue"),
         editorFontFamily: document.getElementById("editorFontFamily"),
         editorTheme: document.getElementById("editorTheme"),
-        showLineNumbers: document.getElementById("showLineNumbers"),
+        showIndentGuides: document.getElementById("showIndentGuides"),
+        indentGuidesOptions: document.getElementById("indentGuidesOptions"),
+        indentGuideStyle: document.getElementById("indentGuideStyle"),
+        highlightActiveIndent: document.getElementById("highlightActiveIndent"),
         showDocumentation: document.getElementById("showDocumentation"),
         documentationOptions: document.getElementById("documentationOptions"),
         positionButtons: document.querySelectorAll(".position-btn"),
@@ -221,6 +242,10 @@
         ).toFixed(1);
       });
 
+      this.elements.showIndentGuides.addEventListener("change", (e) => {
+        this.toggleIndentGuidesOptions(e.target.checked);
+      });
+
       this.elements.showDocumentation.addEventListener("change", (e) => {
         this.toggleDocumentationOptions(e.target.checked);
         this.updatePreview();
@@ -242,6 +267,54 @@
       this.elements.resetBtn.addEventListener("click", () =>
         this.handleReset()
       );
+    }
+
+    initAccordion() {
+      const accordionHeaders = document.querySelectorAll(".accordion-header");
+      console.log("Found accordion headers:", accordionHeaders.length);
+
+      accordionHeaders.forEach((header) => {
+        header.addEventListener("click", () => {
+          const accordionId = header.dataset.accordion;
+          const content = document.querySelector(
+            `[data-accordion-content="${accordionId}"]`
+          );
+          const isOpen = header.classList.contains("active");
+
+          console.log("Accordion clicked:", accordionId);
+          console.log("Content element:", content);
+          console.log("Is currently open:", isOpen);
+
+          if (content) {
+            // Toggle current accordion
+            if (isOpen) {
+              header.classList.remove("active");
+              content.classList.remove("open");
+              console.log("Closing accordion");
+            } else {
+              header.classList.add("active");
+              content.classList.add("open");
+              console.log("Opening accordion");
+              console.log("Content classes:", content.classList.toString());
+            }
+          } else {
+            console.error("Content not found for:", accordionId);
+          }
+        });
+      });
+
+      // Open first accordion by default (Editor Settings)
+      const firstHeader = document.querySelector('[data-accordion="editor"]');
+      const firstContent = document.querySelector(
+        '[data-accordion-content="editor"]'
+      );
+      console.log("First header:", firstHeader);
+      console.log("First content:", firstContent);
+      if (firstHeader && firstContent) {
+        firstHeader.classList.add("active");
+        firstContent.classList.add("open");
+        console.log("Editor accordion opened by default");
+      }
     }
 
     async loadCurrentConfig() {
@@ -270,8 +343,14 @@
       this.elements.editorFontFamily.value =
         this.config.editorFontFamily || "monospace";
       this.elements.editorTheme.value = this.config.editorTheme || "light";
-      this.elements.showLineNumbers.checked =
-        this.config.showLineNumbers !== false;
+
+      this.elements.showIndentGuides.checked =
+        this.config.showIndentGuides !== false;
+      this.elements.indentGuideStyle.value =
+        this.config.indentGuideStyle || "dotted";
+      this.elements.highlightActiveIndent.checked =
+        this.config.highlightActiveIndent !== false;
+      this.toggleIndentGuidesOptions(this.config.showIndentGuides !== false);
 
       this.elements.showDocumentation.checked = this.config.showDocumentation;
       this.toggleDocumentationOptions(this.config.showDocumentation);
@@ -289,6 +368,14 @@
         this.elements.documentationOptions.classList.remove("hidden");
       } else {
         this.elements.documentationOptions.classList.add("hidden");
+      }
+    }
+
+    toggleIndentGuidesOptions(show) {
+      if (show) {
+        this.elements.indentGuidesOptions.classList.remove("hidden");
+      } else {
+        this.elements.indentGuidesOptions.classList.add("hidden");
       }
     }
 
@@ -353,8 +440,10 @@
         editorFontSize: parseInt(this.elements.editorFontSize.value),
         editorLineHeight: parseFloat(this.elements.editorLineHeight.value),
         editorFontFamily: this.elements.editorFontFamily.value,
-        showLineNumbers: this.elements.showLineNumbers.checked,
         editorTheme: this.elements.editorTheme.value,
+        showIndentGuides: this.elements.showIndentGuides.checked,
+        indentGuideStyle: this.elements.indentGuideStyle.value,
+        highlightActiveIndent: this.elements.highlightActiveIndent.checked,
       };
     }
 

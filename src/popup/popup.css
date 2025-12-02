@@ -192,6 +192,107 @@ body.dark-theme .theme-toggle .moon-icon {
 }
 
 /* ===========================
+   Accordion
+   =========================== */
+
+.accordion-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+.accordion-item:hover {
+  border-color: var(--primary);
+}
+
+.accordion-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: left;
+  transition: all 0.2s ease;
+  line-height: 1.5;
+  min-height: 50px;
+}
+
+.accordion-header span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accordion-header:hover {
+  background: var(--bg-secondary);
+}
+
+.accordion-header.active {
+  background: var(--bg-secondary);
+  color: var(--primary);
+}
+
+.accordion-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.accordion-header .chevron {
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
+  transition: transform 0.3s ease;
+  color: var(--text-secondary);
+}
+
+.accordion-header.active .chevron {
+  transform: rotate(180deg);
+  color: var(--primary);
+}
+
+.accordion-content {
+  display: none;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.accordion-content.open {
+  display: block;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.accordion-content .control-group {
+  margin-bottom: 16px;
+}
+
+.accordion-content .checkbox-wrapper {
+  margin-bottom: 12px;
+}
+
+/* ===========================
    Presets
    =========================== */
 
@@ -415,8 +516,20 @@ body.dark-theme .select-control {
   transition: all 0.3s ease;
 }
 
-.doc-options.hidden {
+.doc-options.hidden,
+.indent-options.hidden {
   display: none;
+}
+
+.indent-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 12px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  transition: all 0.3s ease;
 }
 
 .position-grid {

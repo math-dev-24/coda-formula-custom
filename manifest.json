@@ -5,11 +5,7 @@
   "description": "Custom you editor",
   "permissions": [
     "storage",
-    "tabs"
-  ],
-  "host_permissions": [
-    "https://coda.io/d/*",
-    "*://*.coda.io/d/*"
+    "activeTab"
   ],
   "action": {
     "default_popup": "src/popup/popup.html",
