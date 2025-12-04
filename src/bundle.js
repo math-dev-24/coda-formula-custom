@@ -122,14 +122,17 @@
 
     static async notifyConfigChange(config) {
       try {
-        const tabs = await chrome.tabs.query({ url: '*://*.coda.io/d/*' });
-        for (const tab of tabs) {
-          chrome.tabs.sendMessage(tab.id, {
-            type: 'CONFIG_UPDATE',
-            config: config
-          }).catch(() => {
-            // Ignore errors for tabs that don't have content script loaded
-          });
+        // Check if chrome.tabs is available (only in background/popup, not content scripts)
+        if (chrome.tabs && chrome.tabs.query) {
+          const tabs = await chrome.tabs.query({ url: '*://*.coda.io/d/*' });
+          for (const tab of tabs) {
+            chrome.tabs.sendMessage(tab.id, {
+              type: 'CONFIG_UPDATE',
+              config: config
+            }).catch(() => {
+              // Ignore errors for tabs that don't have content script loaded
+            });
+          }
         }
       } catch (error) {
         console.error('[Coda Extension] Error notifying config change:', error);
@@ -900,6 +903,9 @@
         dialog.style.background = '';
       }
 
+      // Add settings button
+      this.addSettingsButton(rootDiv);
+
       // Apply editor styles
       this.styleManager.applyEditorStyles(formulaDiv, this.config);
 
@@ -949,6 +955,559 @@
         console.error('[Coda Extension] Error cleaning up:', e);
       }
     }
+
+    /**
+     * Add settings button to modal
+     */
+    addSettingsButton(rootDiv) {
+      // Check if button already exists
+      if (rootDiv.querySelector('[data-coda-formula-settings-btn]')) return;
+
+      // Create settings button
+      const settingsBtn = document.createElement('button');
+      settingsBtn.setAttribute('data-coda-formula-settings-btn', 'true');
+      settingsBtn.style.cssText = `
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        z-index: 1000;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+      `;
+
+      // Add hover effect
+      settingsBtn.addEventListener('mouseenter', () => {
+        settingsBtn.style.opacity = '1';
+      });
+      settingsBtn.addEventListener('mouseleave', () => {
+        settingsBtn.style.opacity = '0.7';
+      });
+
+      // Create icon
+      const iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      iconSvg.setAttribute('width', '24');
+      iconSvg.setAttribute('height', '24');
+      iconSvg.setAttribute('viewBox', '0 0 48 48');
+      iconSvg.innerHTML = `
+        <rect width="48" height="48" rx="10" fill="#4f46e5"/>
+        <text x="24" y="32" font-family="Arial" font-size="24" font-weight="bold" text-anchor="middle" fill="#ffffff" style="font-style: italic;">f(x)</text>
+        <g fill="#ffffff" opacity="0.5">
+          <path d="M 8 8 L 12 8 L 12 9 L 9 9 L 9 12 L 8 12 Z"/>
+          <path d="M 40 8 L 36 8 L 36 9 L 39 9 L 39 12 L 40 12 Z"/>
+          <path d="M 8 40 L 12 40 L 12 39 L 9 39 L 9 36 L 8 36 Z"/>
+          <path d="M 40 40 L 36 40 L 36 39 L 39 39 L 39 36 L 40 36 Z"/>
+        </g>
+      `;
+
+      // Add text label
+      const label = document.createElement('span');
+      label.textContent = 'Settings';
+      label.style.cssText = `
+        font-size: 14px;
+        font-weight: 500;
+        color: #4f46e5;
+      `;
+
+      settingsBtn.appendChild(iconSvg);
+      settingsBtn.appendChild(label);
+
+      // Add click handler - need to access the global settingsPanel
+      settingsBtn.addEventListener('click', () => {
+        if (window.codaFormulaSettingsPanel) {
+          window.codaFormulaSettingsPanel.toggle();
+        }
+      });
+
+      // Insert button at the beginning of rootDiv
+      rootDiv.insertBefore(settingsBtn, rootDiv.firstChild);
+    }
+  }
+
+  // ========================================
+  // Settings Panel
+  // ========================================
+
+  /**
+   * SettingsPanel - In-page settings overlay
+   */
+  class SettingsPanel {
+    constructor() {
+      this.panel = null;
+      this.config = null;
+      this.elements = {};
+    }
+
+    async show() {
+      this.config = await StorageManager.getConfig();
+      if (!this.panel) {
+        this.createPanel();
+      }
+      this.updateUI();
+      this.panel.style.display = 'block';
+    }
+
+    hide() {
+      if (this.panel) {
+        this.panel.style.display = 'none';
+      }
+    }
+
+    async toggle() {
+      if (this.panel && this.panel.style.display === 'block') {
+        this.hide();
+      } else {
+        await this.show();
+      }
+    }
+
+    createPanel() {
+      this.panel = document.createElement('div');
+      this.panel.setAttribute('data-coda-formula-settings-panel', 'true');
+      this.panel.style.cssText = `
+        position: fixed;
+        top: 60px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 500px;
+        max-height: 90vh;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        z-index: 10000;
+        display: none;
+        overflow: hidden;
+      `;
+
+      this.panel.innerHTML = `
+        <div style="padding: 20px; max-height: 85vh; overflow-y: auto;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #1f2937;">Formula Editor Settings</h2>
+            <button id="closeSettingsPanel" style="background: none; border: none; cursor: pointer; font-size: 24px; color: #6b7280;">&times;</button>
+          </div>
+
+          <div style="margin-bottom: 24px;">
+            <h3 style="font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 12px;">Modal Size</h3>
+            <div style="margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span style="font-size: 13px; color: #6b7280;">Width</span>
+                <span id="widthValue" style="font-size: 13px; color: #4f46e5; font-weight: 500;">95%</span>
+              </div>
+              <input type="range" id="modalWidth" min="20" max="98" value="95" style="width: 100%;" />
+            </div>
+            <div style="margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span style="font-size: 13px; color: #6b7280;">Height</span>
+                <span id="heightValue" style="font-size: 13px; color: #4f46e5; font-weight: 500;">95%</span>
+              </div>
+              <input type="range" id="modalHeight" min="20" max="98" value="95" style="width: 100%;" />
+            </div>
+            <div style="margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span style="font-size: 13px; color: #6b7280;">Horizontal Position</span>
+                <span id="leftValue" style="font-size: 13px; color: #4f46e5; font-weight: 500;">Center</span>
+              </div>
+              <input type="range" id="modalLeft" min="0" max="100" value="50" style="width: 100%;" />
+            </div>
+            <div style="margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span style="font-size: 13px; color: #6b7280;">Vertical Position</span>
+                <span id="topValue" style="font-size: 13px; color: #4f46e5; font-weight: 500;">Center</span>
+              </div>
+              <input type="range" id="modalTop" min="0" max="100" value="50" style="width: 100%;" />
+            </div>
+            <div style="margin-bottom: 16px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="transparentBackground" />
+                <span style="font-size: 13px; color: #374151;">Transparent background</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Editor Settings Section -->
+          <div style="margin-bottom: 24px;">
+            <h3 style="font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 12px;">Editor Settings</h3>
+
+            <div style="margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span style="font-size: 13px; color: #6b7280;">Font Size</span>
+                <span id="fontSizeValue" style="font-size: 13px; color: #4f46e5; font-weight: 500;">14px</span>
+              </div>
+              <input type="range" id="editorFontSize" min="10" max="24" value="14" style="width: 100%;" />
+            </div>
+
+            <div style="margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span style="font-size: 13px; color: #6b7280;">Line Height</span>
+                <span id="lineHeightValue" style="font-size: 13px; color: #4f46e5; font-weight: 500;">1.5</span>
+              </div>
+              <input type="range" id="editorLineHeight" min="1.0" max="2.5" step="0.1" value="1.5" style="width: 100%;" />
+            </div>
+
+            <div style="margin-bottom: 16px;">
+              <label style="display: block; font-size: 13px; color: #6b7280; margin-bottom: 4px;">Font Family</label>
+              <select id="editorFontFamily" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+                <option value="monospace">Monospace</option>
+                <option value="fira-code">Fira Code</option>
+                <option value="jetbrains-mono">JetBrains Mono</option>
+                <option value="source-code-pro">Source Code Pro</option>
+                <option value="opendyslexic">OpenDyslexic</option>
+              </select>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+              <label style="display: block; font-size: 13px; color: #6b7280; margin-bottom: 4px;">Theme</label>
+              <select id="editorTheme" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="sepia">Sepia</option>
+                <option value="high-contrast">High Contrast</option>
+                <option value="protanopia">Protanopia (Red-blind)</option>
+                <option value="deuteranopia">Deuteranopia (Green-blind)</option>
+                <option value="tritanopia">Tritanopia (Blue-blind)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Documentation Section -->
+          <div style="margin-bottom: 24px;">
+            <h3 style="font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 12px;">Documentation</h3>
+
+            <div style="margin-bottom: 16px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="showDocumentation" checked />
+                <span style="font-size: 13px; color: #374151;">Show documentation panel</span>
+              </label>
+            </div>
+
+            <div id="documentationOptions">
+              <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; color: #6b7280; margin-bottom: 8px;">Position</label>
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;">
+                  <button class="position-btn" data-position="left" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 12px;">Left</button>
+                  <button class="position-btn active" data-position="right" style="padding: 8px; border: 1px solid #4f46e5; border-radius: 6px; background: #ede9fe; cursor: pointer; font-size: 12px; color: #4f46e5;">Right</button>
+                  <button class="position-btn" data-position="top" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 12px;">Top</button>
+                  <button class="position-btn" data-position="bottom" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 12px;">Bottom</button>
+                  <button class="position-btn" data-position="none" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 12px;">None</button>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                  <span style="font-size: 13px; color: #6b7280;">Editor Size</span>
+                  <span id="proportionValue" style="font-size: 13px; color: #4f46e5; font-weight: 500;">66%</span>
+                </div>
+                <input type="range" id="editorProportion" min="30" max="80" value="66" style="width: 100%;" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Indent Guides Section -->
+          <div style="margin-bottom: 24px;">
+            <h3 style="font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 12px;">Indent Guides</h3>
+
+            <div style="margin-bottom: 16px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="showIndentGuides" checked />
+                <span style="font-size: 13px; color: #374151;">Show indent guide lines</span>
+              </label>
+            </div>
+
+            <div id="indentGuidesOptions">
+              <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; color: #6b7280; margin-bottom: 4px;">Guide Style</label>
+                <select id="indentGuideStyle" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+                  <option value="dotted">Dotted</option>
+                  <option value="solid">Solid</option>
+                  <option value="dashed">Dashed</option>
+                </select>
+              </div>
+
+              <div style="margin-bottom: 16px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input type="checkbox" id="highlightActiveIndent" checked />
+                  <span style="font-size: 13px; color: #374151;">Highlight active indent</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <button id="resetSettingsBtn" style="padding: 8px 16px; background: #f3f4f6; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; color: #374151;">Reset</button>
+            <button id="saveSettingsBtn" style="padding: 8px 16px; background: #4f46e5; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; color: white;">Save</button>
+          </div>
+
+          <div id="settingsStatus" style="margin-top: 12px; padding: 8px; border-radius: 6px; font-size: 13px; text-align: center; display: none;"></div>
+        </div>
+      `;
+
+      document.body.appendChild(this.panel);
+      this.cacheElements();
+      this.attachEventListeners();
+    }
+
+    cacheElements() {
+      this.elements = {
+        closeBtn: this.panel.querySelector('#closeSettingsPanel'),
+        saveBtn: this.panel.querySelector('#saveSettingsBtn'),
+        resetBtn: this.panel.querySelector('#resetSettingsBtn'),
+        status: this.panel.querySelector('#settingsStatus'),
+
+        // Modal size
+        modalWidth: this.panel.querySelector('#modalWidth'),
+        modalHeight: this.panel.querySelector('#modalHeight'),
+        modalLeft: this.panel.querySelector('#modalLeft'),
+        modalTop: this.panel.querySelector('#modalTop'),
+        widthValue: this.panel.querySelector('#widthValue'),
+        heightValue: this.panel.querySelector('#heightValue'),
+        leftValue: this.panel.querySelector('#leftValue'),
+        topValue: this.panel.querySelector('#topValue'),
+        transparentBackground: this.panel.querySelector('#transparentBackground'),
+
+        // Editor settings
+        editorFontSize: this.panel.querySelector('#editorFontSize'),
+        fontSizeValue: this.panel.querySelector('#fontSizeValue'),
+        editorLineHeight: this.panel.querySelector('#editorLineHeight'),
+        lineHeightValue: this.panel.querySelector('#lineHeightValue'),
+        editorFontFamily: this.panel.querySelector('#editorFontFamily'),
+        editorTheme: this.panel.querySelector('#editorTheme'),
+
+        // Documentation
+        showDocumentation: this.panel.querySelector('#showDocumentation'),
+        documentationOptions: this.panel.querySelector('#documentationOptions'),
+        positionButtons: this.panel.querySelectorAll('.position-btn'),
+        editorProportion: this.panel.querySelector('#editorProportion'),
+        proportionValue: this.panel.querySelector('#proportionValue'),
+
+        // Indent guides
+        showIndentGuides: this.panel.querySelector('#showIndentGuides'),
+        indentGuidesOptions: this.panel.querySelector('#indentGuidesOptions'),
+        indentGuideStyle: this.panel.querySelector('#indentGuideStyle'),
+        highlightActiveIndent: this.panel.querySelector('#highlightActiveIndent')
+      };
+    }
+
+    attachEventListeners() {
+      this.elements.closeBtn.addEventListener('click', () => this.hide());
+      this.panel.addEventListener('click', (e) => {
+        if (e.target === this.panel) this.hide();
+      });
+
+      this.elements.modalWidth.addEventListener('input', (e) => {
+        this.elements.widthValue.textContent = `${e.target.value}%`;
+      });
+      this.elements.modalHeight.addEventListener('input', (e) => {
+        this.elements.heightValue.textContent = `${e.target.value}%`;
+      });
+      this.elements.modalLeft.addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        let label = 'Center';
+        if (value < 25) label = 'Left';
+        else if (value > 75) label = 'Right';
+        this.elements.leftValue.textContent = label;
+      });
+      this.elements.modalTop.addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        let label = 'Center';
+        if (value < 25) label = 'Top';
+        else if (value > 75) label = 'Bottom';
+        this.elements.topValue.textContent = label;
+      });
+
+      // Editor settings sliders
+      this.elements.editorFontSize.addEventListener('input', (e) => {
+        this.elements.fontSizeValue.textContent = `${e.target.value}px`;
+      });
+
+      this.elements.editorLineHeight.addEventListener('input', (e) => {
+        this.elements.lineHeightValue.textContent = e.target.value;
+      });
+
+      // Documentation checkbox
+      this.elements.showDocumentation.addEventListener('change', (e) => {
+        this.toggleDocumentationOptions(e.target.checked);
+      });
+
+      // Position buttons
+      this.elements.positionButtons.forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          this.handlePositionClick(e.target);
+        });
+      });
+
+      // Editor proportion slider
+      this.elements.editorProportion.addEventListener('input', (e) => {
+        this.elements.proportionValue.textContent = `${e.target.value}%`;
+      });
+
+      // Indent guides checkbox
+      this.elements.showIndentGuides.addEventListener('change', (e) => {
+        this.toggleIndentGuidesOptions(e.target.checked);
+      });
+
+      // Action buttons
+      this.elements.saveBtn.addEventListener('click', () => this.handleSave());
+      this.elements.resetBtn.addEventListener('click', () => this.handleReset());
+    }
+
+    /**
+     * Toggle documentation options visibility
+     */
+    toggleDocumentationOptions(show) {
+      if (show) {
+        this.elements.documentationOptions.style.display = 'block';
+      } else {
+        this.elements.documentationOptions.style.display = 'none';
+      }
+    }
+
+    /**
+     * Toggle indent guides options visibility
+     */
+    toggleIndentGuidesOptions(show) {
+      if (show) {
+        this.elements.indentGuidesOptions.style.display = 'block';
+      } else {
+        this.elements.indentGuidesOptions.style.display = 'none';
+      }
+    }
+
+    /**
+     * Handle position button click
+     */
+    handlePositionClick(btn) {
+      this.elements.positionButtons.forEach((b) => {
+        b.style.border = '1px solid #d1d5db';
+        b.style.background = 'white';
+        b.style.color = 'inherit';
+      });
+      btn.style.border = '1px solid #4f46e5';
+      btn.style.background = '#ede9fe';
+      btn.style.color = '#4f46e5';
+    }
+
+    updateUI() {
+      if (!this.config) return;
+
+      this.elements.modalWidth.value = this.config.modalWidth;
+      this.elements.modalHeight.value = this.config.modalHeight;
+      this.elements.modalLeft.value = this.config.modalLeft || 50;
+      this.elements.modalTop.value = this.config.modalTop || 50;
+      this.elements.widthValue.textContent = `${this.config.modalWidth}%`;
+      this.elements.heightValue.textContent = `${this.config.modalHeight}%`;
+
+      const leftValue = this.config.modalLeft || 50;
+      let leftLabel = 'Center';
+      if (leftValue < 25) leftLabel = 'Left';
+      else if (leftValue > 75) leftLabel = 'Right';
+      this.elements.leftValue.textContent = leftLabel;
+
+      const topValue = this.config.modalTop || 50;
+      let topLabel = 'Center';
+      if (topValue < 25) topLabel = 'Top';
+      else if (topValue > 75) topLabel = 'Bottom';
+      this.elements.topValue.textContent = topLabel;
+
+      this.elements.transparentBackground.checked = this.config.transparentBackground || false;
+
+      // Editor settings
+      this.elements.editorFontSize.value = this.config.editorFontSize || 14;
+      this.elements.fontSizeValue.textContent = `${this.config.editorFontSize || 14}px`;
+      this.elements.editorLineHeight.value = this.config.editorLineHeight || 1.5;
+      this.elements.lineHeightValue.textContent = this.config.editorLineHeight || 1.5;
+      this.elements.editorFontFamily.value = this.config.editorFontFamily || 'monospace';
+      this.elements.editorTheme.value = this.config.editorTheme || 'light';
+
+      // Documentation
+      this.elements.showDocumentation.checked = this.config.showDocumentation !== false;
+      this.toggleDocumentationOptions(this.config.showDocumentation !== false);
+
+      // Update position buttons
+      this.elements.positionButtons.forEach((btn) => {
+        if (btn.dataset.position === this.config.documentationPosition) {
+          this.handlePositionClick(btn);
+        }
+      });
+
+      // Editor proportion
+      this.elements.editorProportion.value = this.config.editorProportion || 66;
+      this.elements.proportionValue.textContent = `${this.config.editorProportion || 66}%`;
+
+      // Indent guides
+      this.elements.showIndentGuides.checked = this.config.showIndentGuides !== false;
+      this.toggleIndentGuidesOptions(this.config.showIndentGuides !== false);
+      this.elements.indentGuideStyle.value = this.config.indentGuideStyle || 'dotted';
+      this.elements.highlightActiveIndent.checked = this.config.highlightActiveIndent !== false;
+    }
+
+    getConfigFromUI() {
+      const selectedPosition = this.panel.querySelector('.position-btn[data-position][style*="4f46e5"]');
+
+      return {
+        modalWidth: parseInt(this.elements.modalWidth.value),
+        modalHeight: parseInt(this.elements.modalHeight.value),
+        modalLeft: parseInt(this.elements.modalLeft.value),
+        modalTop: parseInt(this.elements.modalTop.value),
+        transparentBackground: this.elements.transparentBackground.checked,
+        showDocumentation: this.elements.showDocumentation.checked,
+        documentationPosition: selectedPosition ? selectedPosition.dataset.position : 'right',
+        editorProportion: parseInt(this.elements.editorProportion.value),
+        editorFontSize: parseInt(this.elements.editorFontSize.value),
+        editorLineHeight: parseFloat(this.elements.editorLineHeight.value),
+        editorFontFamily: this.elements.editorFontFamily.value,
+        editorTheme: this.elements.editorTheme.value,
+        showIndentGuides: this.elements.showIndentGuides.checked,
+        indentGuideStyle: this.elements.indentGuideStyle.value,
+        highlightActiveIndent: this.elements.highlightActiveIndent.checked
+      };
+    }
+
+    async handleSave() {
+      const newConfig = this.getConfigFromUI();
+      const success = await StorageManager.saveConfig(newConfig);
+
+      if (success) {
+        this.config = newConfig;
+        this.showStatus('Settings saved successfully!', 'success');
+        window.dispatchEvent(new CustomEvent('codaFormulaConfigChanged', { detail: newConfig }));
+      } else {
+        this.showStatus('Error saving settings', 'error');
+      }
+    }
+
+    async handleReset() {
+      if (!confirm('Reset all settings to defaults?')) return;
+
+      const success = await StorageManager.resetToDefaults();
+      if (success) {
+        this.config = await StorageManager.getConfig();
+        this.updateUI();
+        this.showStatus('Settings reset to defaults!', 'success');
+        window.dispatchEvent(new CustomEvent('codaFormulaConfigChanged', { detail: this.config }));
+      } else {
+        this.showStatus('Error resetting settings', 'error');
+      }
+    }
+
+    showStatus(message, type) {
+      const statusEl = this.elements.status;
+      statusEl.textContent = message;
+      statusEl.style.display = 'block';
+      statusEl.style.background = type === 'success' ? '#d1fae5' : '#fee2e2';
+      statusEl.style.color = type === 'success' ? '#065f46' : '#991b1b';
+
+      setTimeout(() => {
+        statusEl.style.display = 'none';
+      }, 3000);
+    }
   }
 
   // ========================================
@@ -966,6 +1525,7 @@
       this.observer = null;
       this.domSelector = new DOMSelector();
       this.dialogProcessor = new DialogProcessor(config);
+      this.settingsPanel = new SettingsPanel();
     }
 
     /**
@@ -974,6 +1534,16 @@
     init() {
       this.processDialogs();
       this.startObserver();
+      this.listenForConfigChanges();
+    }
+
+    /**
+     * Listen for configuration changes from settings panel
+     */
+    listenForConfigChanges() {
+      window.addEventListener('codaFormulaConfigChanged', (event) => {
+        this.updateConfig(event.detail);
+      });
     }
 
     /**
@@ -1072,6 +1642,9 @@
         const config = await StorageManager.getConfig();
 
         this.customizer = new ModalCustomizer(config);
+
+        // Expose settings panel globally for button access
+        window.codaFormulaSettingsPanel = this.customizer.settingsPanel;
 
         if (document.readyState === "loading") {
           window.addEventListener("DOMContentLoaded", () => {

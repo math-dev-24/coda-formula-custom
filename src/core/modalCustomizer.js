@@ -4,6 +4,8 @@
  * Following Single Responsibility and DRY principles
  */
 
+import { SettingsPanel } from './settingsPanel.js';
+
 /**
  * Main Modal Customizer Class
  */
@@ -12,6 +14,7 @@ export class ModalCustomizer {
     this.config = config;
     this.processedDialogs = new WeakSet();
     this.observer = null;
+    this.settingsPanel = new SettingsPanel();
   }
 
   /**
@@ -20,6 +23,16 @@ export class ModalCustomizer {
   init() {
     this.processDialogs();
     this.startObserver();
+    this.listenForConfigChanges();
+  }
+
+  /**
+   * Listen for configuration changes from settings panel
+   */
+  listenForConfigChanges() {
+    window.addEventListener('codaFormulaConfigChanged', (event) => {
+      this.updateConfig(event.detail);
+    });
   }
 
   /**
@@ -126,6 +139,9 @@ export class ModalCustomizer {
     // Apply background transparency
     this.applyBackgroundTransparency(dialog);
 
+    // Add settings button
+    this.addSettingsButton(rootDiv);
+
     // Get the target container
     const target = this.getTargetContainer(rootDiv);
     if (!target) return;
@@ -177,6 +193,90 @@ export class ModalCustomizer {
     } else {
       dialog.style.background = '';
     }
+  }
+
+  /**
+   * Add settings button to modal
+   * @param {HTMLElement} rootDiv - Root div of dialog
+   */
+  addSettingsButton(rootDiv) {
+    // Check if button already exists
+    if (rootDiv.querySelector('[data-coda-formula-settings-btn]')) return;
+
+    // Find the header section (first child usually contains the close button)
+    const headerSection = rootDiv.querySelector(':scope > div');
+    if (!headerSection) return;
+
+    // Create settings button
+    const settingsBtn = document.createElement('button');
+    settingsBtn.setAttribute('data-coda-formula-settings-btn', 'true');
+    settingsBtn.style.cssText = `
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 1000;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    `;
+
+    // Add hover effect
+    settingsBtn.addEventListener('mouseenter', () => {
+      settingsBtn.style.opacity = '1';
+    });
+    settingsBtn.addEventListener('mouseleave', () => {
+      settingsBtn.style.opacity = '0.7';
+    });
+
+    // Create icon
+    const iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    iconSvg.setAttribute('width', '24');
+    iconSvg.setAttribute('height', '24');
+    iconSvg.setAttribute('viewBox', '0 0 48 48');
+    iconSvg.innerHTML = `
+      <rect width="48" height="48" rx="10" fill="#4f46e5"/>
+      <text x="24" y="32" font-family="Arial" font-size="24" font-weight="bold" text-anchor="middle" fill="#ffffff" style="font-style: italic;">f(x)</text>
+      <g fill="#ffffff" opacity="0.5">
+        <path d="M 8 8 L 12 8 L 12 9 L 9 9 L 9 12 L 8 12 Z"/>
+        <path d="M 40 8 L 36 8 L 36 9 L 39 9 L 39 12 L 40 12 Z"/>
+        <path d="M 8 40 L 12 40 L 12 39 L 9 39 L 9 36 L 8 36 Z"/>
+        <path d="M 40 40 L 36 40 L 36 39 L 39 39 L 39 36 L 40 36 Z"/>
+      </g>
+    `;
+
+    // Add text label
+    const label = document.createElement('span');
+    label.textContent = 'Settings';
+    label.style.cssText = `
+      font-size: 14px;
+      font-weight: 500;
+      color: #4f46e5;
+    `;
+
+    settingsBtn.appendChild(iconSvg);
+    settingsBtn.appendChild(label);
+
+    // Add click handler (will implement overlay in next step)
+    settingsBtn.addEventListener('click', () => {
+      this.toggleSettingsPanel();
+    });
+
+    // Insert button at the beginning of rootDiv
+    rootDiv.insertBefore(settingsBtn, rootDiv.firstChild);
+  }
+
+  /**
+   * Toggle settings panel visibility
+   */
+  toggleSettingsPanel() {
+    this.settingsPanel.toggle();
   }
 
   /**
