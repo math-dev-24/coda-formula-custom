@@ -35,8 +35,8 @@
 
   function validateConfig(config) {
     if (!config) return false;
-    if (config.modalWidth < 50 || config.modalWidth > 95) return false;
-    if (config.modalHeight < 50 || config.modalHeight > 95) return false;
+    if (config.modalWidth < 20 || config.modalWidth > 98) return false;
+    if (config.modalHeight < 20 || config.modalHeight > 98) return false;
     const validPositions = ["left", "right", "top", "bottom", "none"];
     if (!validPositions.includes(config.documentationPosition)) return false;
     if (config.editorProportion < 30 || config.editorProportion > 80)
