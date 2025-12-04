@@ -46,6 +46,7 @@ class PopupController {
       heightValue: document.getElementById('heightValue'),
       leftValue: document.getElementById('leftValue'),
       topValue: document.getElementById('topValue'),
+      transparentBackground: document.getElementById('transparentBackground'),
 
       // Editor settings
       editorFontSize: document.getElementById('editorFontSize'),
@@ -213,6 +214,9 @@ class PopupController {
     else if (topValue > 75) topLabel = 'Bottom';
     this.elements.topValue.textContent = topLabel;
 
+    // Transparent background
+    this.elements.transparentBackground.checked = this.config.transparentBackground || false;
+
     // Editor settings
     this.elements.editorFontSize.value = this.config.editorFontSize || 14;
     this.elements.fontSizeValue.textContent = `${this.config.editorFontSize || 14}px`;
@@ -342,6 +346,7 @@ class PopupController {
       modalHeight: parseInt(this.elements.modalHeight.value),
       modalLeft: parseInt(this.elements.modalLeft.value),
       modalTop: parseInt(this.elements.modalTop.value),
+      transparentBackground: this.elements.transparentBackground.checked,
       showDocumentation: this.elements.showDocumentation.checked,
       documentationPosition: selectedPosition ? selectedPosition.dataset.position : 'right',
       editorProportion: parseInt(this.elements.editorProportion.value),

@@ -15,6 +15,7 @@
     modalHeight: 95,
     modalLeft: 50,
     modalTop: 50,
+    transparentBackground: false,
     showDocumentation: true,
     documentationPosition: 'right',
     editorProportion: 66,
@@ -892,6 +893,13 @@
       // Apply modal size and position
       this.modalSizeManager.applySize(rootDiv, this.config, dialog);
 
+      // Apply background transparency
+      if (this.config.transparentBackground) {
+        dialog.style.background = 'transparent';
+      } else {
+        dialog.style.background = '';
+      }
+
       // Apply editor styles
       this.styleManager.applyEditorStyles(formulaDiv, this.config);
 
@@ -928,6 +936,9 @@
         rootDiv.style.left = '';
         rootDiv.style.top = '';
         rootDiv.style.transform = '';
+
+        // Reset background
+        dialog.style.background = '';
 
         const target = this.domSelector.findTargetContainer(rootDiv);
         if (target) {

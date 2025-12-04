@@ -83,6 +83,9 @@ export class ModalCustomizer {
       rootDiv.style.left = '';
       rootDiv.style.top = '';
       rootDiv.style.transform = '';
+
+      // Reset background
+      dialog.style.background = '';
     });
   }
 
@@ -119,6 +122,9 @@ export class ModalCustomizer {
 
     // Apply modal size and position
     this.applyModalSize(rootDiv, dialog);
+
+    // Apply background transparency
+    this.applyBackgroundTransparency(dialog);
 
     // Get the target container
     const target = this.getTargetContainer(rootDiv);
@@ -159,6 +165,18 @@ export class ModalCustomizer {
     rootDiv.style.left = `${modalLeft}%`;
     rootDiv.style.top = `${modalTop}%`;
     rootDiv.style.transform = `translate(-${modalLeft}%, -${modalTop}%)`;
+  }
+
+  /**
+   * Apply background transparency based on config
+   * @param {HTMLElement} dialog - Dialog container element
+   */
+  applyBackgroundTransparency(dialog) {
+    if (this.config.transparentBackground) {
+      dialog.style.background = 'transparent';
+    } else {
+      dialog.style.background = '';
+    }
   }
 
   /**

@@ -17,6 +17,7 @@
     modalHeight: 95,
     modalLeft: 50,
     modalTop: 50,
+    transparentBackground: false,
     showDocumentation: true,
     documentationPosition: "right",
     editorProportion: 66,
@@ -200,6 +201,7 @@
         leftValue: document.getElementById("leftValue"),
         modalTop: document.getElementById("modalTop"),
         topValue: document.getElementById("topValue"),
+        transparentBackground: document.getElementById("transparentBackground"),
 
         // Editor settings
         editorFontSize: document.getElementById("editorFontSize"),
@@ -361,6 +363,9 @@
 
       this.elements.modalTop.value = this.config.modalTop || 50;
 
+      // Transparent background
+      this.elements.transparentBackground.checked = this.config.transparentBackground || false;
+
       // Editor settings
       this.elements.editorFontSize.value = this.config.editorFontSize || 14;
       this.elements.fontSizeValue.textContent = `${
@@ -472,6 +477,7 @@
         modalHeight: parseInt(this.elements.modalHeight.value),
         modalLeft: parseInt(this.elements.modalLeft.value),
         modalTop: parseInt(this.elements.modalTop.value),
+        transparentBackground: this.elements.transparentBackground.checked,
         showDocumentation: this.elements.showDocumentation.checked,
         documentationPosition: selectedPosition
           ? selectedPosition.dataset.position

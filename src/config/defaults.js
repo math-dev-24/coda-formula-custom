@@ -9,6 +9,7 @@ const DEFAULT_CONFIG = {
   modalHeight: 95, // Percentage (20-98)
   modalLeft: 50, // Horizontal position - Percentage (0-100), 50 = centered
   modalTop: 50, // Vertical position - Percentage (0-100), 50 = centered
+  transparentBackground: false, // Remove gray background behind modal
 
   // Documentation settings
   showDocumentation: true,
