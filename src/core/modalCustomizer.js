@@ -79,6 +79,10 @@ export class ModalCustomizer {
       rootDiv.style.height = '';
       rootDiv.style.maxWidth = '';
       rootDiv.style.maxHeight = '';
+      rootDiv.style.position = '';
+      rootDiv.style.left = '';
+      rootDiv.style.top = '';
+      rootDiv.style.transform = '';
     });
   }
 
@@ -113,8 +117,8 @@ export class ModalCustomizer {
     const rootDiv = dialog.querySelector(':scope > div');
     if (!rootDiv) return;
 
-    // Apply modal size
-    this.applyModalSize(rootDiv);
+    // Apply modal size and position
+    this.applyModalSize(rootDiv, dialog);
 
     // Get the target container
     const target = this.getTargetContainer(rootDiv);
@@ -137,14 +141,24 @@ export class ModalCustomizer {
   /**
    * Apply modal size based on config
    * @param {HTMLElement} rootDiv - Root div of dialog
+   * @param {HTMLElement} dialog - Dialog container element
    */
-  applyModalSize(rootDiv) {
-    const { modalWidth, modalHeight } = this.config;
+  applyModalSize(rootDiv, dialog) {
+    const { modalWidth, modalHeight, modalLeft, modalTop } = this.config;
 
     rootDiv.style.width = `${modalWidth}%`;
     rootDiv.style.height = `${modalHeight}%`;
     rootDiv.style.maxWidth = `${modalWidth}%`;
     rootDiv.style.maxHeight = `${modalHeight}%`;
+
+    // Calculate position
+    // modalLeft: 0 = left, 50 = center, 100 = right
+    // modalTop: 0 = top, 50 = center, 100 = bottom
+    // Apply on rootDiv with position absolute for full control
+    rootDiv.style.position = 'absolute';
+    rootDiv.style.left = `${modalLeft}%`;
+    rootDiv.style.top = `${modalTop}%`;
+    rootDiv.style.transform = `translate(-${modalLeft}%, -${modalTop}%)`;
   }
 
   /**

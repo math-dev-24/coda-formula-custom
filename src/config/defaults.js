@@ -7,6 +7,8 @@ const DEFAULT_CONFIG = {
   // Modal dimensions
   modalWidth: 95, // Percentage (20-98)
   modalHeight: 95, // Percentage (20-98)
+  modalLeft: 50, // Horizontal position - Percentage (0-100), 50 = centered
+  modalTop: 50, // Vertical position - Percentage (0-100), 50 = centered
 
   // Documentation settings
   showDocumentation: true,
@@ -59,6 +61,8 @@ function validateConfig(config) {
   // Validate modal dimensions
   if (config.modalWidth < 20 || config.modalWidth > 98) return false;
   if (config.modalHeight < 20 || config.modalHeight > 98) return false;
+  if (config.modalLeft < 0 || config.modalLeft > 100) return false;
+  if (config.modalTop < 0 || config.modalTop > 100) return false;
 
   // Validate documentation position
   const validPositions = ["left", "right", "top", "bottom", "none"];

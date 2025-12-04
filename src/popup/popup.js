@@ -40,8 +40,12 @@ class PopupController {
       // Modal size
       modalWidth: document.getElementById('modalWidth'),
       modalHeight: document.getElementById('modalHeight'),
+      modalLeft: document.getElementById('modalLeft'),
+      modalTop: document.getElementById('modalTop'),
       widthValue: document.getElementById('widthValue'),
       heightValue: document.getElementById('heightValue'),
+      leftValue: document.getElementById('leftValue'),
+      topValue: document.getElementById('topValue'),
 
       // Editor settings
       editorFontSize: document.getElementById('editorFontSize'),
@@ -90,6 +94,22 @@ class PopupController {
 
     this.elements.modalHeight.addEventListener('input', (e) => {
       this.elements.heightValue.textContent = `${e.target.value}%`;
+    });
+
+    this.elements.modalLeft.addEventListener('input', (e) => {
+      const value = parseInt(e.target.value);
+      let label = 'Center';
+      if (value < 25) label = 'Left';
+      else if (value > 75) label = 'Right';
+      this.elements.leftValue.textContent = label;
+    });
+
+    this.elements.modalTop.addEventListener('input', (e) => {
+      const value = parseInt(e.target.value);
+      let label = 'Center';
+      if (value < 25) label = 'Top';
+      else if (value > 75) label = 'Bottom';
+      this.elements.topValue.textContent = label;
     });
 
     // Editor settings
@@ -176,8 +196,22 @@ class PopupController {
     // Modal size
     this.elements.modalWidth.value = this.config.modalWidth;
     this.elements.modalHeight.value = this.config.modalHeight;
+    this.elements.modalLeft.value = this.config.modalLeft || 50;
+    this.elements.modalTop.value = this.config.modalTop || 50;
     this.elements.widthValue.textContent = `${this.config.modalWidth}%`;
     this.elements.heightValue.textContent = `${this.config.modalHeight}%`;
+
+    const leftValue = this.config.modalLeft || 50;
+    let leftLabel = 'Center';
+    if (leftValue < 25) leftLabel = 'Left';
+    else if (leftValue > 75) leftLabel = 'Right';
+    this.elements.leftValue.textContent = leftLabel;
+
+    const topValue = this.config.modalTop || 50;
+    let topLabel = 'Center';
+    if (topValue < 25) topLabel = 'Top';
+    else if (topValue > 75) topLabel = 'Bottom';
+    this.elements.topValue.textContent = topLabel;
 
     // Editor settings
     this.elements.editorFontSize.value = this.config.editorFontSize || 14;
@@ -306,6 +340,8 @@ class PopupController {
     return {
       modalWidth: parseInt(this.elements.modalWidth.value),
       modalHeight: parseInt(this.elements.modalHeight.value),
+      modalLeft: parseInt(this.elements.modalLeft.value),
+      modalTop: parseInt(this.elements.modalTop.value),
       showDocumentation: this.elements.showDocumentation.checked,
       documentationPosition: selectedPosition ? selectedPosition.dataset.position : 'right',
       editorProportion: parseInt(this.elements.editorProportion.value),

@@ -15,6 +15,8 @@
   const DEFAULT_CONFIG = {
     modalWidth: 95,
     modalHeight: 95,
+    modalLeft: 50,
+    modalTop: 50,
     showDocumentation: true,
     documentationPosition: "right",
     editorProportion: 66,
@@ -37,6 +39,8 @@
     if (!config) return false;
     if (config.modalWidth < 20 || config.modalWidth > 98) return false;
     if (config.modalHeight < 20 || config.modalHeight > 98) return false;
+    if (config.modalLeft < 0 || config.modalLeft > 100) return false;
+    if (config.modalTop < 0 || config.modalTop > 100) return false;
     const validPositions = ["left", "right", "top", "bottom", "none"];
     if (!validPositions.includes(config.documentationPosition)) return false;
     if (config.editorProportion < 30 || config.editorProportion > 80)
@@ -190,8 +194,12 @@
         // Modal size
         modalWidth: document.getElementById("modalWidth"),
         modalHeight: document.getElementById("modalHeight"),
+        modalLeft: document.getElementById("modalLeft"),
         widthValue: document.getElementById("widthValue"),
         heightValue: document.getElementById("heightValue"),
+        leftValue: document.getElementById("leftValue"),
+        modalTop: document.getElementById("modalTop"),
+        topValue: document.getElementById("topValue"),
 
         // Editor settings
         editorFontSize: document.getElementById("editorFontSize"),
@@ -239,6 +247,22 @@
 
       this.elements.modalHeight.addEventListener("input", (e) => {
         this.elements.heightValue.textContent = `${e.target.value}%`;
+      });
+
+      this.elements.modalLeft.addEventListener("input", (e) => {
+        const value = parseInt(e.target.value);
+        let label = "Center";
+        if (value < 25) label = "Left";
+        else if (value > 75) label = "Right";
+        this.elements.leftValue.textContent = label;
+      });
+
+      this.elements.modalTop.addEventListener("input", (e) => {
+        const value = parseInt(e.target.value);
+        let label = "Center";
+        if (value < 25) label = "Top";
+        else if (value > 75) label = "Bottom";
+        this.elements.topValue.textContent = label;
       });
 
       // Editor settings
@@ -319,8 +343,23 @@
       // Modal size
       this.elements.modalWidth.value = this.config.modalWidth;
       this.elements.modalHeight.value = this.config.modalHeight;
+      this.elements.modalLeft.value = this.config.modalLeft || 50;
       this.elements.widthValue.textContent = `${this.config.modalWidth}%`;
       this.elements.heightValue.textContent = `${this.config.modalHeight}%`;
+
+      const leftValue = this.config.modalLeft || 50;
+      let leftLabel = "Center";
+      if (leftValue < 25) leftLabel = "Left";
+      else if (leftValue > 75) leftLabel = "Right";
+      this.elements.leftValue.textContent = leftLabel;
+
+      const topValue = this.config.modalTop || 50;
+      let topLabel = "Center";
+      if (topValue < 25) topLabel = "Top";
+      else if (topValue > 75) topLabel = "Bottom";
+      this.elements.topValue.textContent = topLabel;
+
+      this.elements.modalTop.value = this.config.modalTop || 50;
 
       // Editor settings
       this.elements.editorFontSize.value = this.config.editorFontSize || 14;
@@ -431,6 +470,8 @@
       return {
         modalWidth: parseInt(this.elements.modalWidth.value),
         modalHeight: parseInt(this.elements.modalHeight.value),
+        modalLeft: parseInt(this.elements.modalLeft.value),
+        modalTop: parseInt(this.elements.modalTop.value),
         showDocumentation: this.elements.showDocumentation.checked,
         documentationPosition: selectedPosition
           ? selectedPosition.dataset.position

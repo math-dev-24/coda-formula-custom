@@ -13,6 +13,8 @@
   const DEFAULT_CONFIG = {
     modalWidth: 95,
     modalHeight: 95,
+    modalLeft: 50,
+    modalTop: 50,
     showDocumentation: true,
     documentationPosition: 'right',
     editorProportion: 66,
@@ -33,8 +35,10 @@
 
   function validateConfig(config) {
     if (!config) return false;
-    if (config.modalWidth < 50 || config.modalWidth > 95) return false;
-    if (config.modalHeight < 50 || config.modalHeight > 95) return false;
+    if (config.modalWidth < 20 || config.modalWidth > 98) return false;
+    if (config.modalHeight < 20 || config.modalHeight > 98) return false;
+    if (config.modalLeft < 0 || config.modalLeft > 100) return false;
+    if (config.modalTop < 0 || config.modalTop > 100) return false;
     const validPositions = ['left', 'right', 'top', 'bottom', 'none'];
     if (!validPositions.includes(config.documentationPosition)) return false;
     if (config.editorProportion < 30 || config.editorProportion > 80) return false;
@@ -561,12 +565,21 @@
    * Single Responsibility: Modal sizing
    */
   class ModalSizeManager {
-    applySize(rootDiv, config) {
-      const { modalWidth, modalHeight } = config;
+    applySize(rootDiv, config, dialog) {
+      const { modalWidth, modalHeight, modalLeft, modalTop } = config;
       rootDiv.style.width = `${modalWidth}%`;
       rootDiv.style.height = `${modalHeight}%`;
       rootDiv.style.maxWidth = `${modalWidth}%`;
       rootDiv.style.maxHeight = `${modalHeight}%`;
+
+      // Calculate position
+      // modalLeft: 0 = left, 50 = center, 100 = right
+      // modalTop: 0 = top, 50 = center, 100 = bottom
+      // Apply on rootDiv with position absolute for full control
+      rootDiv.style.position = 'absolute';
+      rootDiv.style.left = `${modalLeft}%`;
+      rootDiv.style.top = `${modalTop}%`;
+      rootDiv.style.transform = `translate(-${modalLeft}%, -${modalTop}%)`;
     }
   }
 
@@ -876,8 +889,8 @@
       const rootDiv = this.domSelector.findRootDiv(dialog);
       if (!rootDiv) return;
 
-      // Apply modal size
-      this.modalSizeManager.applySize(rootDiv, this.config);
+      // Apply modal size and position
+      this.modalSizeManager.applySize(rootDiv, this.config, dialog);
 
       // Apply editor styles
       this.styleManager.applyEditorStyles(formulaDiv, this.config);
@@ -911,6 +924,10 @@
         rootDiv.style.height = '';
         rootDiv.style.maxWidth = '';
         rootDiv.style.maxHeight = '';
+        rootDiv.style.position = '';
+        rootDiv.style.left = '';
+        rootDiv.style.top = '';
+        rootDiv.style.transform = '';
 
         const target = this.domSelector.findTargetContainer(rootDiv);
         if (target) {
