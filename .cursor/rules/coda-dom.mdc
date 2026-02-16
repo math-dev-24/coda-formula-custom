@@ -1,0 +1,36 @@
+---
+description: Selecteurs DOM Coda et interaction avec le DOM de Coda
+globs: src/content/**/*.js
+alwaysApply: false
+---
+
+# Interaction avec le DOM Coda
+
+## Selecteurs principaux
+
+```css
+div[data-coda-ui-id="dialog"][role="dialog"]   /* Modale de formule */
+div[data-coda-ui-id="formula-editor"]          /* Editeur de formule */
+[data-coda-ui-id="result-list-item"]           /* Items de resultat */
+```
+
+## Detection des dialogues
+
+- `MutationObserver` sur `document.body` avec `{ childList: true, subtree: true }`
+- Verifier que le noeud contient un `formula-editor` avant de le traiter
+- `WeakSet` pour tracker les dialogues deja traites (pas de fuites memoire)
+
+## Manipulation du DOM
+
+- Verifier l'existence d'un element avant d'y acceder (`if (!element) return`)
+- `:scope >` pour les selecteurs relatifs
+- `!important` pour overrider les styles inline de Coda
+- Ne jamais supprimer les elements Coda, seulement modifier leurs styles
+
+## Reset
+
+Avant de reappliquer une configuration :
+1. Retirer les flex wrappers crees
+2. Restaurer la visibilite des enfants
+3. Supprimer les styles inline ajoutes
+4. Supprimer les `dataset` markers (`codaFormulaLayoutPatched`, `codaFormulaTarget`)

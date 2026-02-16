@@ -1,0 +1,41 @@
+---
+description: Standards de code JavaScript/React pour le projet
+globs: src/**/*.{js,jsx}
+alwaysApply: false
+---
+
+# Standards de code
+
+## Principes architecturaux
+
+- **SOLID** : une classe = une responsabilite. Ne pas melanger logique DOM, styles et stockage.
+- **DRY** : les modules partages sont dans `src/shared/`. Ne jamais dupliquer config ou storage.
+- **Composition > Heritage** : les classes composent leurs dependances via le constructeur.
+
+## Conventions de nommage
+
+- Fichiers JS : `kebab-case.js` (ex: `style-manager.js`)
+- Fichiers React : `PascalCase.jsx` (ex: `ModalSizePanel.jsx`)
+- Classes : `PascalCase` (ex: `ModalCustomizer`)
+- Composants React : `PascalCase` (ex: `EditorSettingsPanel`)
+- Hooks : `useCamelCase` (ex: `useChromeStorage`)
+- Methodes et variables : `camelCase`
+- Constantes : `UPPER_SNAKE_CASE` (ex: `DEFAULT_CONFIG`)
+
+## React
+
+- Composants fonctionnels uniquement (pas de classes)
+- Hooks pour la logique reutilisable (`useChromeStorage`)
+- `useCallback` pour les handlers passes en props
+- Pas de `useEffect` inutile : preferer les derives dans le render
+
+## Documentation
+
+- JSDoc sur les classes et methodes publiques du content script
+- `@param` avec types JSDoc sur les props des composants React
+
+## Gestion d'erreurs
+
+- `try/catch` sur toutes les operations Chrome API et DOM
+- Logger avec le prefixe `[Coda Formula Customizer]`
+- Early returns pour reduire l'imbrication

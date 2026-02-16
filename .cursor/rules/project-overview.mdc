@@ -1,0 +1,42 @@
+---
+description: Vue d'ensemble du projet Coda Formula Customizer
+alwaysApply: true
+---
+
+# Coda Formula Customizer - Vue d'ensemble
+
+Extension Chrome (Manifest V3, v2.0.0) qui personnalise l'editeur de formules Coda.
+
+## Stack technique
+
+- **Popup** : React 19 + JSX + CSS variables
+- **Content script** : JavaScript ES6+ vanilla (MutationObserver, DOM manipulation)
+- **Build** : Vite 5 + @crxjs/vite-plugin + @vitejs/plugin-react
+- **Stockage** : chrome.storage.local
+- **Communication** : chrome.runtime.onMessage / chrome.tabs.sendMessage
+
+## Structure
+
+```
+src/shared/config.js              → DEFAULT_CONFIG, validateConfig, mergeConfig (source unique)
+src/shared/storage.js             → StorageManager (ACID, partage popup + content)
+src/content/index.js              → Point d'entree content script
+src/content/style-manager.js      → StyleManager (CSS, themes, indent guides)
+src/content/dom-selector.js       → DOMSelector (queries DOM Coda)
+src/content/modal-size-manager.js → ModalSizeManager (taille/position modale)
+src/content/layout-manager.js     → LayoutManager (disposition documentation)
+src/content/dialog-processor.js   → DialogProcessor (Facade)
+src/content/modal-customizer.js   → ModalCustomizer (Observer, MutationObserver)
+src/popup/App.jsx                 → Composant racine React
+src/popup/hooks/useChromeStorage.js → Hook sync chrome.storage <-> React state
+src/popup/components/*.jsx        → Composants UI (Header, Accordion, panels, etc.)
+```
+
+## Build
+
+```bash
+npm run dev      # Dev server avec HMR
+npm run build    # Production → dist/
+```
+
+Le plugin @crxjs/vite-plugin lit manifest.json et gere automatiquement les entry points (popup React + content script IIFE).

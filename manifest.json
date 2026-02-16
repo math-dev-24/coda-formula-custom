@@ -1,21 +1,30 @@
 {
   "manifest_version": 3,
   "name": "Coda Formula Customizer",
-  "version": "1.0.3",
-  "description": "Custom you editor",
+  "version": "2.0.0",
+  "description": "Customize the Coda formula editor: resize, reposition, change fonts, themes and documentation layout",
+  "icons": {
+    "16": "icons/icon16.svg",
+    "32": "icons/icon32.svg",
+    "48": "icons/icon48.svg",
+    "128": "icons/icon128.svg"
+  },
   "permissions": [
     "storage",
     "activeTab",
     "tabs"
   ],
+  "host_permissions": [
+    "*://*.coda.io/*"
+  ],
   "action": {
-    "default_popup": "src/popup/popup.html",
+    "default_popup": "src/popup/index.html",
     "default_title": "Coda Formula Customizer"
   },
   "content_scripts": [
     {
-      "matches": ["https://coda.io/d/*", "*://*.coda.io/d/*"],
-      "js": ["src/bundle.js"],
+      "matches": ["*://*.coda.io/d/*"],
+      "js": ["src/content/index.js"],
       "run_at": "document_idle"
     }
   ]

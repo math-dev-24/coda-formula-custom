@@ -21,6 +21,8 @@ yarn-error.log*
 # Chrome Extension
 *.crx
 *.pem
+
+# Build output
 dist/
 build/
 
@@ -33,4 +35,6 @@ node_modules/
 
 # Archive files
 *.zip
+
+# AI tools
 .claude

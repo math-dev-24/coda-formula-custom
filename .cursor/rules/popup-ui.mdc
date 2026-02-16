@@ -1,0 +1,32 @@
+---
+description: Conventions pour l'interface popup React
+globs: src/popup/**/*.{jsx,css,js}
+alwaysApply: false
+---
+
+# Interface Popup (React)
+
+## Architecture
+
+- `App.jsx` : composant racine, state via `useChromeStorage` hook
+- `hooks/useChromeStorage.js` : sync bidirectionnelle chrome.storage ↔ React state
+- `components/` : un fichier par composant, nomme en PascalCase
+
+## Etat
+
+- Un seul objet `config` dans le state de App
+- `handleChange(key, value)` met a jour une propriete
+- `saveConfig()` persiste dans chrome.storage et notifie les onglets Coda
+- Les panels recoivent `config` et `onChange` en props
+
+## CSS
+
+- Un seul fichier `App.css` avec variables CSS (`:root` + `.dark-theme`)
+- Pas de CSS-in-JS, pas de CSS modules
+- Classes semantiques : `.accordion-item`, `.preset-btn`, `.control-group`
+- Animations via `@keyframes slideDown`
+
+## Composants reutilisables
+
+- `Accordion` : accepte `title`, `icon`, `defaultOpen`, `children`
+- Les panels (ModalSizePanel, EditorSettingsPanel, etc.) acceptent `config` et `onChange`

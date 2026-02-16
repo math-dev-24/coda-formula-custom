@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+/* Enable class-based dark mode (Tailwind v4 default is media query) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Coda-inspired color palette */
+@theme {
+  --color-coda-50: #fff7f5;
+  --color-coda-100: #ffede8;
+  --color-coda-200: #fdd8cf;
+  --color-coda-300: #f9b5a6;
+  --color-coda-400: #f4876f;
+  --color-coda-500: #ed6a52;
+  --color-coda-600: #d9533b;
+  --color-coda-700: #b5412e;
+  --color-coda-800: #963929;
+  --color-coda-900: #7c3327;
+  --color-coda-950: #431710;
+  --color-gray-750: #2a2f3a;
+  --color-gray-850: #1c2028;
+}
+
+/* ========================================
+   Staggered entrance
+   ======================================== */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-in {
+  animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.delay-1 { animation-delay: 50ms; }
+.delay-2 { animation-delay: 100ms; }
+.delay-3 { animation-delay: 150ms; }
+.delay-4 { animation-delay: 200ms; }
+.delay-5 { animation-delay: 250ms; }
+.delay-6 { animation-delay: 300ms; }
+
+/* ========================================
+   Toast
+   ======================================== */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes toastOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(6px); }
+}
+.animate-toast-in  { animation: toastIn  0.3s ease-out both; }
+.animate-toast-out { animation: toastOut 0.2s ease-in both; }
+
+/* ========================================
+   Skeleton
+   ======================================== */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #f1f0ee 25%, #f8f7f5 50%, #f1f0ee 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+.dark .skeleton {
+  background: linear-gradient(90deg, #2a2f3a 25%, #353b48 50%, #2a2f3a 75%);
+  background-size: 200% 100%;
+}
+
+/* ========================================
+   Range slider
+   ======================================== */
+input[type="range"] {
+  @apply w-full h-1 rounded-full outline-none cursor-pointer appearance-none bg-gray-200 dark:bg-gray-700;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  @apply w-3.5 h-3.5 rounded-full bg-coda-500 cursor-pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  @apply scale-125;
+  box-shadow: 0 0 0 4px rgba(237, 106, 82, 0.12);
+}
+input[type="range"]::-moz-range-thumb {
+  @apply w-3.5 h-3.5 rounded-full bg-coda-500 cursor-pointer border-none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+/* ========================================
+   Toggle switch
+   ======================================== */
+.toggle-track {
+  @apply relative w-9 h-5 rounded-full bg-gray-300 dark:bg-gray-600 transition-colors duration-200 shrink-0;
+}
+input:checked ~ .toggle-track {
+  @apply bg-coda-500;
+}
+.toggle-thumb {
+  @apply absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+input:checked ~ .toggle-track .toggle-thumb {
+  transform: translateX(16px);
+}
+
+/* ========================================
+   Select arrow
+   ======================================== */
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%239ca3af' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  @apply bg-no-repeat bg-[right_10px_center] pr-8;
+}
+
+/* ========================================
+   Scrollbar
+   ======================================== */
+.custom-scroll::-webkit-scrollbar { width: 4px; }
+.custom-scroll::-webkit-scrollbar-track { background: transparent; }
+.custom-scroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 9999px; }
+.custom-scroll::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
+.dark .custom-scroll::-webkit-scrollbar-thumb { background: #374151; }
+.dark .custom-scroll::-webkit-scrollbar-thumb:hover { background: #4b5563; }

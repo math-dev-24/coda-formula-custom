@@ -1,0 +1,36 @@
+---
+description: Regles de configuration et validation des parametres
+globs: src/shared/config.js
+alwaysApply: false
+---
+
+# Configuration et validation
+
+Toute la config est dans `src/shared/config.js` (source unique, importee par popup et content script).
+
+## Plages de valeurs
+
+| Propriete | Min | Max | Type |
+|-----------|-----|-----|------|
+| `modalWidth` | 20 | 98 | number (%) |
+| `modalHeight` | 20 | 98 | number (%) |
+| `modalLeft` | 0 | 100 | number (%) |
+| `modalTop` | 0 | 100 | number (%) |
+| `editorProportion` | 30 | 80 | number (%) |
+| `editorFontSize` | 10 | 24 | number (px) |
+| `editorLineHeight` | 1.0 | 2.5 | number |
+
+## Valeurs enumerees
+
+| Propriete | Valeurs valides |
+|-----------|----------------|
+| `documentationPosition` | `left`, `right`, `top`, `bottom`, `none` |
+| `editorFontFamily` | `monospace`, `fira-code`, `jetbrains-mono`, `source-code-pro`, `opendyslexic` |
+| `editorTheme` | `light`, `dark`, `sepia`, `high-contrast`, `protanopia`, `deuteranopia`, `tritanopia` |
+| `indentGuideStyle` | `solid`, `dotted`, `dashed` |
+
+## Ajout d'une propriete
+
+1. Ajouter la valeur par defaut dans `DEFAULT_CONFIG`
+2. Ajouter la validation dans `validateConfig()`
+3. `documentationProportion` est auto-calculee : `100 - editorProportion`

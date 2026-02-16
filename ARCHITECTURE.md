@@ -2,266 +2,145 @@
 
 ## Vue d'ensemble
 
-Cette extension Chrome personnalise l'éditeur de formules Coda en appliquant des styles personnalisés, en ajustant la taille des modales et en gérant le positionnement de la documentation.
+Extension Chrome (Manifest V3) qui personnalise l'editeur de formules Coda. Le popup est une app React 19, le content script est du JavaScript vanilla. Vite + @crxjs/vite-plugin gerent le build.
 
-## Principes d'architecture
+## Stack technique
 
-L'architecture suit les principes **SOLID** :
+| Couche | Technologie |
+|--------|-------------|
+| Popup UI | React 19, JSX, CSS variables |
+| Content Script | JavaScript ES6+, MutationObserver |
+| Build | Vite 5, @crxjs/vite-plugin, @vitejs/plugin-react |
+| Stockage | chrome.storage.local |
+| Communication | chrome.runtime.onMessage, chrome.tabs.sendMessage |
 
-- **Single Responsibility Principle (SRP)** : Chaque classe a une seule responsabilité
-- **Open/Closed Principle** : Ouvert à l'extension, fermé à la modification
-- **Liskov Substitution Principle** : Les classes peuvent être remplacées par leurs sous-classes
-- **Interface Segregation Principle** : Interfaces spécifiques plutôt que génériques
-- **Dependency Inversion Principle** : Dépendre d'abstractions, pas d'implémentations
+## Structure des modules
 
-## Structure des classes
+### `src/shared/` — Code partage
 
-### 1. **StyleManager**
-**Responsabilité** : Gestion de tous les styles (polices, thèmes, CSS)
+Importe par le popup ET le content script. Source unique de verite.
 
-**Méthodes principales** :
-- `applyEditorStyles(formulaDiv, config)` - Point d'entrée principal pour appliquer tous les styles
-- `injectGlobalStyles(config)` - Injecte des styles CSS globaux dans le DOM
-- `applyInlineStyles(formulaDiv, config)` - Applique des styles inline sur le conteneur de la formule
-- `applyToEditorElements(formulaDiv, config)` - Applique des styles sur tous les éléments de l'éditeur
-- `applyTheme(formulaDiv, config)` - Applique le thème (light, dark, sepia)
-- `toggleLineNumbers(formulaDiv, config)` - Affiche/masque les numéros de ligne
-- `resetStyles(element)` - Réinitialise les styles d'un élément
+| Module | Responsabilite |
+|--------|---------------|
+| `config.js` | `DEFAULT_CONFIG`, `validateConfig()`, `mergeConfig()` |
+| `storage.js` | `StorageManager` : CRUD config, presets, notification cross-tabs |
 
-**Données** :
-- `fontMap` : Mapping des noms de polices vers les valeurs CSS
-- `styleElementId` : ID de l'élément style injecté
+### `src/content/` — Content Script
 
----
+Injecte dans les pages `coda.io/d/*`. Architecture SOLID avec 6 classes :
 
-### 2. **DOMSelector**
-**Responsabilité** : Sélection et recherche d'éléments DOM
+| Classe | Pattern | Responsabilite |
+|--------|---------|---------------|
+| `ModalCustomizer` | Observer | Point d'entree, MutationObserver sur le DOM |
+| `DialogProcessor` | Facade | Orchestre les 3 managers ci-dessous |
+| `StyleManager` | - | CSS global, inline styles, themes, indent guides |
+| `LayoutManager` | - | Flex wrappers, position documentation, reset |
+| `ModalSizeManager` | - | Taille et position de la modale |
+| `DOMSelector` | - | Queries DOM avec selecteurs Coda |
 
-**Méthodes principales** :
-- `findDialogs()` - Trouve tous les dialogues de formule
-- `findFormulaEditor(dialog)` - Trouve l'éditeur de formule dans un dialogue
-- `findRootDiv(dialog)` - Trouve la div racine d'un dialogue
-- `findTargetContainer(rootDiv)` - Trouve le conteneur cible pour la manipulation du layout
-- `findTargetContainerFallback(rootDiv)` - Méthode de secours pour trouver le conteneur
+### `src/popup/` — Interface React
 
-**Avantages** :
-- Centralise toute la logique de sélection DOM
-- Facilite les tests et le débogage
-- Rend le code plus maintenable
+| Fichier | Role |
+|---------|------|
+| `App.jsx` | Composant racine, state global, composition des panels |
+| `hooks/useChromeStorage.js` | Hook sync `chrome.storage` ↔ React state |
+| `components/Header.jsx` | Header gradient + toggle theme sombre |
+| `components/PresetSelector.jsx` | 3 boutons preset (Default, Medium, Fullscreen) |
+| `components/Accordion.jsx` | Accordeon reutilisable avec animation |
+| `components/ModalSizePanel.jsx` | Sliders taille/position + checkbox transparence |
+| `components/EditorSettingsPanel.jsx` | Font size, line height, font family, theme |
+| `components/IndentGuidesPanel.jsx` | Toggle guides, style, highlight actif |
+| `components/DocumentationPanel.jsx` | Toggle doc, position 4 directions, proportion |
+| `components/ActionBar.jsx` | Boutons Save et Reset |
+| `components/StatusMessage.jsx` | Toast de feedback |
 
----
-
-### 3. **ModalSizeManager**
-**Responsabilité** : Gestion de la taille des modales
-
-**Méthodes principales** :
-- `applySize(rootDiv, config)` - Applique la taille configurée à la modale
-
-**Simple et focalisé** : Une seule responsabilité, facile à tester
-
----
-
-### 4. **LayoutManager**
-**Responsabilité** : Gestion du layout et du positionnement de la documentation
-
-**Méthodes principales** :
-- `applyLayout(target, kids, formulaDiv, config)` - Point d'entrée principal
-- `hideDocumentation(kids)` - Masque le panneau de documentation
-- `showDocumentation(target, kids, formulaDiv, config)` - Affiche la documentation avec le bon layout
-- `hideIntermediateChildren(kids)` - Masque les enfants intermédiaires
-- `createFlexWrapper()` - Crée un conteneur flex
-- `arrangeChildren(flexWrapper, mainChild, sideChild, config)` - Arrange les enfants selon la position
-- `adjustSideChildLayout(sideRoot)` - Ajuste le layout du panneau latéral
-- `observeSideChild(sideChild)` - Observe les changements DOM du panneau latéral
-- `resetLayout(target)` - Réinitialise le layout à l'état original
-
-**Complexité maîtrisée** : Divise la logique complexe de layout en méthodes simples et testables
-
----
-
-### 5. **DialogProcessor**
-**Responsabilité** : Orchestration de la personnalisation des dialogues
-
-**Dépendances** :
-- `DOMSelector` : Pour trouver les éléments
-- `StyleManager` : Pour appliquer les styles
-- `ModalSizeManager` : Pour ajuster la taille
-- `LayoutManager` : Pour gérer le layout
-
-**Méthodes principales** :
-- `processDialog(dialog, formulaDiv)` - Traite un dialogue complet
-- `resetDialog(dialog)` - Réinitialise un dialogue à son état original
-
-**Pattern Facade** : Fournit une interface simple pour coordonner plusieurs systèmes complexes
-
----
-
-### 6. **ModalCustomizer**
-**Responsabilité** : Point d'entrée principal, observation et coordination de haut niveau
-
-**Dépendances** :
-- `DOMSelector` : Pour trouver les dialogues
-- `DialogProcessor` : Pour traiter les dialogues
-
-**Méthodes principales** :
-- `init()` - Initialise le customizer
-- `updateConfig(newConfig)` - Met à jour la configuration
-- `processDialogs()` - Traite tous les dialogues du DOM
-- `startObserver()` - Démarre l'observation du DOM
-- `stopObserver()` - Arrête l'observation
-
-**Pattern Observer** : Observe le DOM pour détecter les nouveaux dialogues
-
----
-
-### 7. **StorageManager**
-**Responsabilité** : Gestion du stockage de la configuration
-
-**Méthodes principales** :
-- `getConfig()` - Récupère la configuration
-- `saveConfig(config)` - Sauvegarde la configuration
-- `applyPreset(presetName)` - Applique un préréglage
-- `resetToDefaults()` - Réinitialise aux valeurs par défaut
-- `notifyConfigChange(config)` - Notifie les changements de configuration
-- `onConfigChange(callback)` - Écoute les changements de configuration
-
----
-
-## Flux de données
+## Flux de donnees
 
 ```
-User Action (Popup)
-       ↓
-StorageManager.saveConfig()
-       ↓
-Chrome Storage API
-       ↓
-StorageManager.notifyConfigChange()
-       ↓
-ModalCustomizer.updateConfig()
-       ↓
-DialogProcessor.resetDialog() (pour tous les dialogues)
-       ↓
-DialogProcessor.processDialog() (re-traiter avec nouvelle config)
-       ↓
-├── ModalSizeManager.applySize()
-├── StyleManager.applyEditorStyles()
-└── LayoutManager.applyLayout()
+┌──────────────────────┐
+│   Popup (React)      │
+│   useChromeStorage   │
+└──────────┬───────────┘
+           │ saveConfig()
+           ▼
+┌──────────────────────┐
+│  StorageManager      │
+│  chrome.storage.local│
+└──────────┬───────────┘
+           │ notifyConfigChange()
+           │ chrome.tabs.sendMessage
+           ▼
+┌──────────────────────┐
+│  Content Script      │
+│  ModalCustomizer     │
+│    .updateConfig()   │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  DialogProcessor     │
+│  ├─ resetDialog()    │
+│  └─ processDialog()  │
+│     ├─ ModalSizeManager.applySize()
+│     ├─ StyleManager.applyEditorStyles()
+│     └─ LayoutManager.applyLayout()
+└──────────────────────┘
 ```
 
-## Flux de traitement d'un dialogue
+## Build
 
-```
-ModalCustomizer détecte un nouveau dialogue (via MutationObserver)
-       ↓
-DOMSelector.findFormulaEditor()
-       ↓
-DialogProcessor.processDialog()
-       ↓
-├── DOMSelector.findRootDiv()
-├── DOMSelector.findTargetContainer()
-       ↓
-├── ModalSizeManager.applySize()
-       ↓
-├── StyleManager.applyEditorStyles()
-│   ├── injectGlobalStyles()
-│   ├── applyInlineStyles()
-│   ├── applyToEditorElements()
-│   ├── applyTheme()
-│   └── toggleLineNumbers()
-       ↓
-└── LayoutManager.applyLayout()
-    ├── hideDocumentation() OU
-    └── showDocumentation()
-        ├── createFlexWrapper()
-        ├── arrangeChildren()
-        ├── adjustSideChildLayout()
-        └── observeSideChild()
+```bash
+npm run dev      # Dev server avec HMR (popup uniquement)
+npm run build    # Production build → dist/
 ```
 
-## Avantages de cette architecture
+Vite + @crxjs/vite-plugin :
+- Lit `manifest.json` pour detecter les entry points
+- Popup : bundle React avec code splitting
+- Content script : bundle IIFE unique
+- Copie automatique des icones et du manifest dans `dist/`
 
-### 1. **Maintenabilité**
-- Chaque classe a une responsabilité claire
-- Facile de localiser et corriger les bugs
-- Code auto-documenté avec JSDoc
+## Selecteurs DOM Coda
 
-### 2. **Testabilité**
-- Chaque classe peut être testée indépendamment
-- Injection de dépendances facilite les mocks
-- Méthodes courtes et focalisées
+```css
+div[data-coda-ui-id="dialog"][role="dialog"]   /* Modale de formule */
+div[data-coda-ui-id="formula-editor"]          /* Editeur de formule */
+[data-coda-ui-id="result-list-item"]           /* Items de resultat */
+```
 
-### 3. **Extensibilité**
-- Facile d'ajouter de nouveaux thèmes (modifier StyleManager)
-- Facile d'ajouter de nouvelles positions de documentation (modifier LayoutManager)
-- Facile d'ajouter de nouveaux types de dialogues (modifier DOMSelector)
+Le content script utilise `MutationObserver` sur `document.body` pour detecter l'apparition de nouveaux dialogues. Un `WeakSet` evite de retraiter les dialogues deja personnalises.
 
-### 4. **Réutilisabilité**
-- StyleManager peut être réutilisé pour d'autres éditeurs
-- DOMSelector peut être étendu pour d'autres sélecteurs
-- LayoutManager peut gérer d'autres types de layouts
+## Principes appliques
 
-### 5. **Performance**
-- Styles globaux injectés une seule fois
-- Utilisation de WeakSet pour éviter le retraitement
-- MutationObserver ciblé et efficace
+1. **SOLID** : une classe = une responsabilite
+2. **DRY** : `shared/` elimine toute duplication de config/storage
+3. **Composition** : `DialogProcessor` compose `StyleManager`, `LayoutManager`, `ModalSizeManager`
+4. **React hooks** : `useChromeStorage` encapsule la logique de sync storage
+5. **Early returns** : reduction de la complexite cyclomatique
+6. **JSDoc** : documentation sur toutes les classes et methodes publiques
 
-## Exemples d'extension
+## Extensibilite
 
-### Ajouter un nouveau thème
+### Ajouter un theme
+
+Dans `src/content/style-manager.js`, methode `applyTheme()` :
 
 ```javascript
-// Dans StyleManager.applyTheme()
 const themes = {
-  dark: { bg: '#1e1e1e', color: '#d4d4d4' },
-  sepia: { bg: '#f4ecd8', color: '#5b4636' },
-  light: { bg: '#ffffff', color: '#000000' },
-  // Nouveau thème
-  solarized: { bg: '#002b36', color: '#839496' }
+  // ... themes existants
+  solarized: { bg: '#002b36', color: '#839496' },
 };
 ```
 
-### Ajouter une nouvelle police
+### Ajouter une police
 
-```javascript
-// Dans StyleManager constructor
-this.fontMap = {
-  'monospace': 'monospace',
-  'fira-code': '"Fira Code", "Cascadia Code", monospace',
-  'jetbrains-mono': '"JetBrains Mono", monospace',
-  'source-code-pro': '"Source Code Pro", monospace',
-  // Nouvelle police
-  'cascadia-code': '"Cascadia Code", monospace'
-};
-```
+1. Dans `StyleManager.fontMap` : ajouter le mapping
+2. Dans `src/content/index.js` : ajouter l'URL de la police dans `FONT_URLS`
+3. Dans `src/popup/components/EditorSettingsPanel.jsx` : ajouter l'option dans le select
+4. Dans `src/shared/config.js` : ajouter dans `validFonts`
 
-### Ajouter une nouvelle position de documentation
+### Ajouter un parametre
 
-```javascript
-// Dans LayoutManager.arrangeChildren()
-// Ajouter un cas pour 'center' par exemple
-if (position === 'center') {
-  // Logique pour centrer la documentation
-}
-```
-
-## Bonnes pratiques appliquées
-
-1. **Nommage explicite** : Les noms de classes et méthodes décrivent clairement leur fonction
-2. **JSDoc complet** : Toutes les classes et méthodes publiques sont documentées
-3. **Gestion d'erreurs** : Try/catch et fallbacks pour la robustesse
-4. **Early returns** : Réduction de la complexité cyclomatique
-5. **Constantes** : Évite la duplication de valeurs magiques
-6. **Immutabilité** : Configuration passée en paramètre, pas modifiée
-7. **Composition sur héritage** : Les classes composent leurs dépendances
-
-## Métriques de qualité
-
-- **Couplage** : Faible (chaque classe a peu de dépendances)
-- **Cohésion** : Élevée (chaque méthode contribue à la responsabilité de la classe)
-- **Complexité** : Réduite (méthodes courtes, logique simple)
-- **Duplication** : Éliminée (code réutilisable centralisé)
-
-## Conclusion
-
-Cette architecture modulaire et bien structurée permet un développement rapide, une maintenance facile et une extensibilité maximale. Elle respecte les principes SOLID et les bonnes pratiques de développement logiciel.
+1. `src/shared/config.js` : ajouter dans `DEFAULT_CONFIG` + `validateConfig()`
+2. Creer ou modifier le composant React dans `src/popup/components/`
+3. Implementer la logique dans le content script correspondant
