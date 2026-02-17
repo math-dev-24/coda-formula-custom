@@ -17,6 +17,7 @@
     "@tailwindcss/vite": "^4.1.18",
     "@types/chrome": "^0.0.287",
     "@vitejs/plugin-react": "^4.3.4",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.1.18",
     "vite": "^5.4.14"
   }
