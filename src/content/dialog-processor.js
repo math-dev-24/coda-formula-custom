@@ -7,6 +7,8 @@ import { DOMSelector } from './dom-selector.js';
 import { StyleManager } from './style-manager.js';
 import { ModalSizeManager } from './modal-size-manager.js';
 import { LayoutManager } from './layout-manager.js';
+import { DialogInteractionManager } from './dialog-interaction-manager.js';
+import { FormulaEditorEnhancer } from './formula-editor-enhancer.js';
 
 export class DialogProcessor {
   /**
@@ -18,6 +20,8 @@ export class DialogProcessor {
     this.styleManager = new StyleManager();
     this.modalSizeManager = new ModalSizeManager();
     this.layoutManager = new LayoutManager();
+    this.dialogInteractionManager = new DialogInteractionManager();
+    this.formulaEditorEnhancer = new FormulaEditorEnhancer();
   }
 
   /**
@@ -30,6 +34,7 @@ export class DialogProcessor {
     if (!rootDiv) return;
 
     this.modalSizeManager.applySize(rootDiv, this.config);
+    this.dialogInteractionManager.enhance(dialog, rootDiv);
 
     if (this.config.transparentBackground) {
       dialog.style.background = 'transparent';
@@ -38,6 +43,7 @@ export class DialogProcessor {
     }
 
     this.styleManager.applyEditorStyles(formulaDiv, this.config);
+    this.formulaEditorEnhancer.enhance(formulaDiv);
 
     const target = this.domSelector.findTargetContainer(rootDiv);
     if (!target) return;
@@ -47,7 +53,7 @@ export class DialogProcessor {
     target.style.height = 'auto';
 
     const kids = Array.from(target.children);
-    this.layoutManager.applyLayout(kids, formulaDiv, this.config);
+    this.layoutManager.applyLayout(kids, formulaDiv, this.config, rootDiv);
   }
 
   /**
@@ -71,6 +77,10 @@ export class DialogProcessor {
     if (!rootDiv) return;
 
     try {
+      const formulaDiv = this.domSelector.findFormulaEditor(dialog);
+      if (formulaDiv) this.formulaEditorEnhancer.reset(formulaDiv);
+      this.dialogInteractionManager.reset(rootDiv);
+
       rootDiv.style.width = '';
       rootDiv.style.height = '';
       rootDiv.style.maxWidth = '';

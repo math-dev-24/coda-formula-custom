@@ -9,10 +9,11 @@ Extension Chrome (Manifest V3) qui personnalise l'editeur de formules Coda. Le p
 | Couche | Technologie |
 |--------|-------------|
 | Popup UI | React 19, JSX, CSS variables |
-| Content Script | JavaScript ES6+, MutationObserver |
-| Build | Vite 5, @crxjs/vite-plugin, @vitejs/plugin-react |
+| Content Script | JavaScript ES6+, MutationObserver, ResizeObserver |
+| Build | Vite 7, @crxjs/vite-plugin, @vitejs/plugin-react |
 | Stockage | chrome.storage.local |
 | Communication | chrome.runtime.onMessage, chrome.tabs.sendMessage |
+| Tests | Node test runner |
 
 ## Structure des modules
 
@@ -27,16 +28,27 @@ Importe par le popup ET le content script. Source unique de verite.
 
 ### `src/content/` — Content Script
 
-Injecte dans les pages `coda.io/d/*`. Architecture SOLID avec 6 classes :
+Injecte dans les pages `coda.io/d/*`. Architecture SOLID avec des managers specialises :
 
 | Classe | Pattern | Responsabilite |
 |--------|---------|---------------|
 | `ModalCustomizer` | Observer | Point d'entree, MutationObserver sur le DOM |
-| `DialogProcessor` | Facade | Orchestre les 3 managers ci-dessous |
+| `DialogProcessor` | Facade | Orchestre les managers du dialogue |
 | `StyleManager` | - | CSS global, inline styles, themes, indent guides |
 | `LayoutManager` | - | Flex wrappers, position documentation, reset |
 | `ModalSizeManager` | - | Taille et position de la modale |
+| `DialogInteractionManager` | - | Drag, resize natif, maximize, dim outside, scroll pass-through |
+| `FormulaEditorEnhancer` | - | Folding, no-wrap, scroll horizontal |
+| `SidePanelManager` | - | Poignee live du panneau documentation, masquage rapide |
 | `DOMSelector` | - | Queries DOM avec selecteurs Coda |
+
+Modules de support :
+
+| Module | Responsabilite |
+|--------|---------------|
+| `enhancement-styles.js` | Injecte le CSS runtime des interactions directes |
+| `session-state.js` | Etat runtime non persistant : taille courante, folds, panneau masque |
+| `utils.js` | Helpers purs reutilises par les managers |
 
 ### `src/popup/` — Interface React
 
@@ -82,8 +94,11 @@ Injecte dans les pages `coda.io/d/*`. Architecture SOLID avec 6 classes :
 │  ├─ resetDialog()    │
 │  └─ processDialog()  │
 │     ├─ ModalSizeManager.applySize()
+│     ├─ DialogInteractionManager.enhance()
 │     ├─ StyleManager.applyEditorStyles()
+│     ├─ FormulaEditorEnhancer.enhance()
 │     └─ LayoutManager.applyLayout()
+│        └─ SidePanelManager.attach()
 └──────────────────────┘
 ```
 
@@ -91,6 +106,7 @@ Injecte dans les pages `coda.io/d/*`. Architecture SOLID avec 6 classes :
 
 ```bash
 npm run dev      # Dev server avec HMR (popup uniquement)
+npm test         # Tests unitaires Node
 npm run build    # Production build → dist/
 ```
 
@@ -108,7 +124,28 @@ div[data-coda-ui-id="formula-editor"]          /* Editeur de formule */
 [data-coda-ui-id="result-list-item"]           /* Items de resultat */
 ```
 
-Le content script utilise `MutationObserver` sur `document.body` pour detecter l'apparition de nouveaux dialogues. Un `WeakSet` evite de retraiter les dialogues deja personnalises.
+Le content script utilise `MutationObserver` sur `document.body` pour detecter l'apparition de nouveaux dialogues. Un `WeakSet` evite de retraiter les dialogues deja personnalises. Les interactions directes utilisent aussi `ResizeObserver` et `AbortController` pour nettoyer les listeners quand la config provoque un reset.
+
+## Fonctionnalites runtime
+
+### Dialogue
+
+- `ModalSizeManager` applique la taille initiale issue du popup.
+- `DialogInteractionManager` convertit ensuite le dialogue en surface manipulable : position `fixed`, drag par le header, resize natif, double-clic pour maximiser/restaurer.
+- Les clics hors dialogue sont interceptes pour eviter la fermeture involontaire. La modale devient semi-transparente et les evenements wheel sont relayes vers le document sous-jacent.
+
+### Editeur
+
+- `FormulaEditorEnhancer` detecte les lignes `.kr-line` et `.kr-paragraph`.
+- Les regions pliables sont calculees par profondeur de parentheses, crochets et accolades, en ignorant les chaines et les commentaires `//`.
+- Les etats de fold sont gardes dans `sessionState.foldedRegionsByFormulaHash`, uniquement pour la session de page.
+- Les lignes longues utilisent `white-space: pre` et l'editeur garde un scroll horizontal.
+
+### Documentation
+
+- `LayoutManager` cree le wrapper flex selon la position choisie.
+- `SidePanelManager` ajoute une poignee entre l'editeur et la documentation.
+- Glisser la poignee ajuste la proportion courante. Cliquer sur la poignee ou double-appuyer sur `Cmd` / `Ctrl` masque ou restaure la documentation.
 
 ## Principes appliques
 
@@ -118,6 +155,8 @@ Le content script utilise `MutationObserver` sur `document.body` pour detecter l
 4. **React hooks** : `useChromeStorage` encapsule la logique de sync storage
 5. **Early returns** : reduction de la complexite cyclomatique
 6. **JSDoc** : documentation sur toutes les classes et methodes publiques
+7. **Cleanup explicite** : `AbortController`, `WeakMap` et observers deconnectes au reset
+8. **Tests cibles** : logique pure testee sans navigateur pour garder une suite rapide
 
 ## Extensibilite
 
@@ -144,3 +183,5 @@ const themes = {
 1. `src/shared/config.js` : ajouter dans `DEFAULT_CONFIG` + `validateConfig()`
 2. Creer ou modifier le composant React dans `src/popup/components/`
 3. Implementer la logique dans le content script correspondant
+4. Ajouter ou mettre a jour les tests dans `test/`
+5. Lancer `npm test && npm run build`

@@ -4,12 +4,14 @@
  */
 
 import { StyleManager } from './style-manager.js';
+import { SidePanelManager } from './side-panel-manager.js';
 
 const BORDER_COLOR = '1px solid rgb(240, 240, 240)';
 
 export class LayoutManager {
   constructor() {
     this.styleManager = new StyleManager();
+    this.sidePanelManager = new SidePanelManager();
   }
 
   /**
@@ -18,12 +20,12 @@ export class LayoutManager {
    * @param {HTMLElement} formulaDiv - The formula editor element
    * @param {Object} config - Current configuration
    */
-  applyLayout(kids, formulaDiv, config) {
+  applyLayout(kids, formulaDiv, config, dialogRoot) {
     if (kids.length < 2) return;
-    if (!config.showDocumentation) {
+    if (!config.showDocumentation || config.documentationPosition === 'none') {
       this.hideDocumentation(kids);
     } else {
-      this.showDocumentation(kids, formulaDiv, config);
+      this.showDocumentation(kids, formulaDiv, config, dialogRoot);
     }
   }
 
@@ -46,12 +48,12 @@ export class LayoutManager {
    * @param {HTMLElement} formulaDiv - The formula editor element
    * @param {Object} config - Current configuration
    */
-  showDocumentation(kids, formulaDiv, config) {
+  showDocumentation(kids, formulaDiv, config, dialogRoot) {
     if (kids.length < 2) return;
     const mainChild = formulaDiv;
     const sideChild = kids[kids.length - 1];
 
-    this.createFlexWrapper(kids, mainChild, sideChild, config);
+    this.createFlexWrapper(kids, mainChild, sideChild, config, dialogRoot);
     this.adjustSideChildLayout(sideChild);
     this.observeSideChild(sideChild);
   }
@@ -63,7 +65,7 @@ export class LayoutManager {
    * @param {HTMLElement} sideChild - Documentation element
    * @param {Object} config - Current configuration
    */
-  createFlexWrapper(kids, mainChild, sideChild, config) {
+  createFlexWrapper(kids, mainChild, sideChild, config, dialogRoot) {
     if (kids.length > 2) {
       for (let i = 1; i < kids.length - 1; i++) {
         kids[i].style.display = 'none';
@@ -74,6 +76,7 @@ export class LayoutManager {
     sideChild.style.height = '100%';
 
     const flexWrapper = document.createElement('div');
+    flexWrapper.classList.add('cfw-panel-layout');
     flexWrapper.style.display = 'flex';
     flexWrapper.style.width = '100%';
     flexWrapper.style.height = '100%';
@@ -81,44 +84,29 @@ export class LayoutManager {
     flexWrapper.style.gap = '0px';
 
     const position = config.documentationPosition;
+    mainChild.parentElement.insertBefore(flexWrapper, mainChild);
 
     if (position === 'left' || position === 'right') {
       flexWrapper.style.flexDirection = 'row';
       if (position === 'left') {
         sideChild.style.borderRight = BORDER_COLOR;
         sideChild.style.borderLeft = 'none';
-        mainChild.parentElement.insertBefore(flexWrapper, mainChild);
-        flexWrapper.appendChild(sideChild);
-        flexWrapper.appendChild(mainChild);
       } else {
         sideChild.style.borderLeft = BORDER_COLOR;
         sideChild.style.borderRight = 'none';
-        mainChild.parentElement.insertBefore(flexWrapper, mainChild);
-        flexWrapper.appendChild(mainChild);
-        flexWrapper.appendChild(sideChild);
       }
     } else {
       flexWrapper.style.flexDirection = 'column';
       if (position === 'top') {
         sideChild.style.borderBottom = BORDER_COLOR;
         sideChild.style.borderTop = 'none';
-        mainChild.parentElement.insertBefore(flexWrapper, mainChild);
-        flexWrapper.appendChild(sideChild);
-        flexWrapper.appendChild(mainChild);
       } else {
         sideChild.style.borderTop = BORDER_COLOR;
         sideChild.style.borderBottom = 'none';
-        mainChild.parentElement.insertBefore(flexWrapper, mainChild);
-        flexWrapper.appendChild(mainChild);
-        flexWrapper.appendChild(sideChild);
       }
     }
 
-    const editorProp = config.editorProportion || 66;
-    const docProp = 100 - editorProp;
-    mainChild.style.flex = `${editorProp} 1 0%`;
-    sideChild.style.flex = `${docProp} 1 0%`;
-    sideChild.style.overflow = 'auto';
+    this.sidePanelManager.attach(flexWrapper, mainChild, sideChild, dialogRoot, config);
   }
 
   /**
@@ -153,6 +141,8 @@ export class LayoutManager {
    * @param {HTMLElement} target - Target container
    */
   resetLayout(target) {
+    this.sidePanelManager.reset(target);
+
     Array.from(target.children).forEach(div => {
       const computed = getComputedStyle(div);
       const hasFlexDisplay = div.style.display === 'flex' || computed.display === 'flex';
@@ -165,7 +155,10 @@ export class LayoutManager {
       }
     });
 
-    Array.from(target.children).forEach(child => this.styleManager.resetStyles(child));
+    Array.from(target.children).forEach(child => {
+      child.classList.remove('cfw-panel-main', 'cfw-panel-side', 'cfw-panel-layout');
+      this.styleManager.resetStyles(child);
+    });
 
     target.style.display = '';
     target.style.flexDirection = '';

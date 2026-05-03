@@ -45,10 +45,10 @@ export class ModalCustomizer {
       prev.editorProportion !== newConfig.editorProportion;
 
     if (layoutChanged) {
-      this.dialogProcessor = new DialogProcessor(newConfig);
       this.domSelector.findDialogs().forEach(dialog => {
         this.dialogProcessor.resetDialog(dialog);
       });
+      this.dialogProcessor = new DialogProcessor(newConfig);
       this.processedDialogs = new WeakSet();
       this.processDialogs();
     } else {
