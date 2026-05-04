@@ -1,8 +1,16 @@
 # Coda Formula Customizer
 
-Extension Chrome (Manifest V3) pour personnaliser l'editeur de formules Coda. Redimensionnez la modale, ajustez les polices, appliquez des themes et controlez le panneau de documentation.
+Extension Chrome (Manifest V3) pour personnaliser l'editeur de formules Coda. Redimensionnez la modale, ajustez les polices, appliquez des themes, gerez une bibliotheque de presets et controlez le panneau de documentation.
 
 ## Fonctionnalites
+
+### Presets custom (bibliotheque)
+
+- **Sauvegarder** la configuration courante sous un nom libre (onglet Custom → "Save current config as preset")
+- **Appliquer** un preset d'un clic depuis l'onglet Library
+- **Renommer** un preset en cliquant l'icone crayon (edition inline)
+- **Supprimer** un preset avec confirmation native
+- Les presets capturent un snapshot complet de la configuration (taille modale, editeur, guides, documentation) sans inclure la bibliotheque elle-meme
 
 ### Modale
 
@@ -13,7 +21,6 @@ Extension Chrome (Manifest V3) pour personnaliser l'editeur de formules Coda. Re
 - **Consultation du document** : cliquer hors modale ne ferme plus le dialogue, mais rend la modale semi-transparente et permet de scroller la page Coda derriere
 - **Bouton X** : repositionnement du bouton de fermeture pour rester aligne
 - **Fond transparent** : suppression du fond gris derriere la modale
-- **Presets** : configuration rapide (Defaut, Moyen, Plein ecran)
 
 ### Editeur
 
@@ -22,7 +29,7 @@ Extension Chrome (Manifest V3) pour personnaliser l'editeur de formules Coda. Re
 - **Taille de police** : de 10 a 24 px
 - **Hauteur de ligne** : de 1.0 a 2.5
 - **Polices** : Monospace, Fira Code, JetBrains Mono, Source Code Pro, OpenDyslexic
-- **Themes** : Light, Dark, Sepia, High Contrast, Protanopia, Deuteranopia, Tritanopia
+- **Themes** : Light, Dark, Sepia, High Contrast, Solarized, Monokai, Dracula, Protanopia, Deuteranopia, Tritanopia
 - **Guides d'indentation** : lignes rainbow avec styles solid/dotted/dashed et surbrillance de l'indent actif
 
 ### Documentation
@@ -49,7 +56,7 @@ Extension Chrome (Manifest V3) pour personnaliser l'editeur de formules Coda. Re
 
 ```bash
 git clone <repo-url>
-cd formula-coda-extend
+cd coda-formula-custom
 npm install
 npm run dev
 ```
@@ -79,16 +86,16 @@ Les tests utilisent le runner natif Node et couvrent la logique pure des helpers
 ## Architecture
 
 ```
-formula-coda-extend/
+coda-formula-custom/
 ├── manifest.json                 # Chrome Extension Manifest V3
 ├── package.json                  # Dependances et scripts npm
 ├── vite.config.js                # Configuration Vite + CRXJS
-├── icons/                        # Icones SVG de l'extension
+├── icons/                        # Icones PNG de l'extension
 │
 └── src/
     ├── shared/                   # Modules partages (popup + content)
-    │   ├── config.js             # DEFAULT_CONFIG, validateConfig, mergeConfig
-    │   └── storage.js            # StorageManager (ACID)
+    │   ├── config.js             # DEFAULT_CONFIG, PRESET_SNAPSHOT_KEYS, validateConfig, mergeConfig, snapshotConfig
+    │   └── storage.js            # StorageManager (ACID) + CRUD presets custom
     │
     ├── content/                  # Content script (injecte dans Coda)
     │   ├── index.js              # Point d'entree
@@ -105,22 +112,25 @@ formula-coda-extend/
     │   ├── dialog-processor.js   # Orchestration (pattern Facade)
     │   └── modal-customizer.js   # Observation DOM (MutationObserver)
     │
-    └── popup/                    # Interface utilisateur (React)
+    └── popup/                    # Interface utilisateur (React, 480 px)
         ├── index.html            # HTML shell
         ├── main.jsx              # Point d'entree React
-        ├── App.jsx               # Composant racine
+        ├── App.jsx               # Composant racine, 2 onglets (Custom / Library)
         ├── App.css               # Styles (CSS variables, dark theme)
         ├── hooks/
-        │   └── useChromeStorage.js  # Hook sync chrome.storage <-> React
+        │   └── useChromeStorage.js  # Hook sync chrome.storage <-> React + presets custom
         └── components/
             ├── Header.jsx        # Header + theme toggle
-            ├── PresetSelector.jsx # Presets rapides
+            ├── Tabs.jsx          # Barre d'onglets avec badge
+            ├── SavePresetBar.jsx # Bouton pliable pour sauver un preset
+            ├── LibraryPanel.jsx  # Liste des presets custom
+            ├── PresetCard.jsx    # Carte preset (apply / rename / delete)
             ├── Accordion.jsx     # Accordeon reutilisable
             ├── ModalSizePanel.jsx
             ├── EditorSettingsPanel.jsx
             ├── IndentGuidesPanel.jsx
             ├── DocumentationPanel.jsx
-            ├── ActionBar.jsx     # Boutons Save / Reset
+            ├── ActionBar.jsx     # Bouton Reset (onglet Custom uniquement)
             └── StatusMessage.jsx # Toast de statut
 ```
 
@@ -165,20 +175,13 @@ Popup (React) → useChromeStorage hook
   editorFontSize: 14,              // 10-24 px
   editorLineHeight: 1.5,           // 1.0-2.5
   editorFontFamily: 'monospace',   // monospace | fira-code | jetbrains-mono | source-code-pro | opendyslexic
-  editorTheme: 'light',            // light | dark | sepia | high-contrast | protanopia | deuteranopia | tritanopia
+  editorTheme: 'light',            // light | dark | sepia | high-contrast | solarized | monokai | dracula | protanopia | deuteranopia | tritanopia
   showIndentGuides: true,
   indentGuideStyle: 'dotted',      // solid | dotted | dashed
-  highlightActiveIndent: true
+  highlightActiveIndent: true,
+  customPresets: {}                // { [id]: { id, name, createdAt, config: snapshot } }
 }
 ```
-
-### Presets
-
-| Preset | Largeur | Hauteur | Proportion editeur |
-|--------|---------|---------|-------------------|
-| Defaut | 80 % | 80 % | 66 % |
-| Moyen | 90 % | 90 % | 60 % |
-| Plein ecran | 95 % | 95 % | 70 % |
 
 ## Developpement
 
@@ -193,7 +196,7 @@ Popup (React) → useChromeStorage hook
 
 ### Ajouter une fonctionnalite
 
-1. Ajouter la propriete dans `src/shared/config.js` (`DEFAULT_CONFIG` + `validateConfig`)
+1. Ajouter la propriete dans `src/shared/config.js` (`DEFAULT_CONFIG` + `validateConfig`). Si elle doit etre incluse dans les presets custom, l'ajouter aussi dans `PRESET_SNAPSHOT_KEYS`.
 2. Ajouter le controle dans le composant React correspondant (`src/popup/components/`)
 3. Implementer la logique dans le content script (`src/content/`)
 4. Ajouter ou ajuster les tests dans `test/`
@@ -213,7 +216,7 @@ div[data-coda-ui-id="formula-editor"]          /* Editeur de formule */
 |----------|---------|
 | L'extension ne fonctionne pas | Verifier que la page est sur `coda.io/d/*`, rafraichir la page |
 | Les changements ne s'appliquent pas | Rafraichir la page Coda, ouvrir une nouvelle modale de formule |
-| Reinitialisation | Cliquer sur "Reset" dans le popup |
+| Reinitialisation | Cliquer sur "Reset to defaults" dans l'onglet Custom |
 
 ## Compatibilite
 

@@ -22,12 +22,23 @@ export const DEFAULT_CONFIG = {
   showIndentGuides: true,
   indentGuideStyle: 'dotted',
   highlightActiveIndent: true,
-  presets: {
-    default: { modalWidth: 80, modalHeight: 80, editorProportion: 66 },
-    medium: { modalWidth: 90, modalHeight: 90, editorProportion: 60 },
-    fullscreen: { modalWidth: 95, modalHeight: 95, editorProportion: 70 },
-  },
+  customPresets: {},
 };
+
+export const PRESET_SNAPSHOT_KEYS = [
+  'modalWidth', 'modalHeight', 'modalLeft', 'modalTop', 'transparentBackground',
+  'showDocumentation', 'documentationPosition', 'editorProportion', 'documentationProportion',
+  'editorFontSize', 'editorLineHeight', 'editorFontFamily', 'editorTheme',
+  'showIndentGuides', 'indentGuideStyle', 'highlightActiveIndent',
+];
+
+export function snapshotConfig(config) {
+  const snap = {};
+  for (const key of PRESET_SNAPSHOT_KEYS) {
+    if (key in config) snap[key] = config[key];
+  }
+  return snap;
+}
 
 /**
  * Validate configuration object
@@ -51,7 +62,7 @@ export function validateConfig(config) {
   const validFonts = ['monospace', 'fira-code', 'jetbrains-mono', 'source-code-pro', 'opendyslexic'];
   if (config.editorFontFamily && !validFonts.includes(config.editorFontFamily)) return false;
 
-  const validThemes = ['light', 'dark', 'sepia', 'high-contrast', 'protanopia', 'deuteranopia', 'tritanopia'];
+  const validThemes = ['light', 'dark', 'sepia', 'high-contrast', 'protanopia', 'deuteranopia', 'tritanopia', 'solarized', 'monokai', 'dracula'];
   if (config.editorTheme && !validThemes.includes(config.editorTheme)) return false;
 
   const validIndentStyles = ['solid', 'dotted', 'dashed'];

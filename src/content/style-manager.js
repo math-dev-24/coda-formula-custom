@@ -124,6 +124,9 @@ export class StyleManager {
       protanopia: { bg: '#f5f5f0', color: '#005a9c' },
       deuteranopia: { bg: '#f0f0f5', color: '#8b4513' },
       tritanopia: { bg: '#fff5f0', color: '#c41e3a' },
+      solarized: { bg: '#002b36', color: '#839496' },
+      monokai: { bg: '#272822', color: '#f8f8f2' },
+      dracula: { bg: '#282a36', color: '#f8f8f2' },
     };
     const theme = themes[config.editorTheme] || themes.light;
 

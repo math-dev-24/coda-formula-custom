@@ -39,17 +39,6 @@ export function useChromeStorage() {
     });
   }, [saveConfig]);
 
-  const applyPreset = useCallback(async (presetName) => {
-    const success = await StorageManager.applyPreset(presetName);
-    if (success) {
-      const newConfig = await StorageManager.getConfig();
-      setConfig(newConfig);
-      showStatus('Preset applied!', 'success');
-    } else {
-      showStatus('Error applying preset', 'error');
-    }
-  }, [showStatus]);
-
   const resetConfig = useCallback(async () => {
     const success = await StorageManager.resetToDefaults();
     if (success) {
@@ -61,5 +50,49 @@ export function useChromeStorage() {
     }
   }, [showStatus]);
 
-  return { config, updateConfig, applyPreset, resetConfig, loading, status };
+  const saveCustomPreset = useCallback(async (name) => {
+    const id = await StorageManager.saveCustomPreset(name);
+    if (id) {
+      const cfg = await StorageManager.getConfig();
+      setConfig(cfg);
+      showStatus('Preset saved!', 'success');
+      return id;
+    }
+    showStatus('Could not save preset', 'error');
+    return null;
+  }, [showStatus]);
+
+  const applyCustomPreset = useCallback(async (id) => {
+    const ok = await StorageManager.applyCustomPreset(id);
+    if (ok) {
+      const cfg = await StorageManager.getConfig();
+      setConfig(cfg);
+      showStatus('Preset applied!', 'success');
+    } else {
+      showStatus('Could not apply preset', 'error');
+    }
+  }, [showStatus]);
+
+  const renameCustomPreset = useCallback(async (id, name) => {
+    const ok = await StorageManager.renameCustomPreset(id, name);
+    if (ok) {
+      const cfg = await StorageManager.getConfig();
+      setConfig(cfg);
+    } else {
+      showStatus('Could not rename', 'error');
+    }
+  }, [showStatus]);
+
+  const deleteCustomPreset = useCallback(async (id) => {
+    const ok = await StorageManager.deleteCustomPreset(id);
+    if (ok) {
+      const cfg = await StorageManager.getConfig();
+      setConfig(cfg);
+      showStatus('Preset deleted', 'success');
+    } else {
+      showStatus('Could not delete', 'error');
+    }
+  }, [showStatus]);
+
+  return { config, updateConfig, resetConfig, loading, status, saveCustomPreset, applyCustomPreset, renameCustomPreset, deleteCustomPreset };
 }

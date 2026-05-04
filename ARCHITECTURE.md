@@ -23,8 +23,8 @@ Importe par le popup ET le content script. Source unique de verite.
 
 | Module | Responsabilite |
 |--------|---------------|
-| `config.js` | `DEFAULT_CONFIG`, `validateConfig()`, `mergeConfig()` |
-| `storage.js` | `StorageManager` : CRUD config, presets, notification cross-tabs |
+| `config.js` | `DEFAULT_CONFIG`, `PRESET_SNAPSHOT_KEYS`, `validateConfig()`, `mergeConfig()`, `snapshotConfig()` |
+| `storage.js` | `StorageManager` : CRUD config, presets custom, notification cross-tabs |
 
 ### `src/content/` — Content Script
 
@@ -54,16 +54,19 @@ Modules de support :
 
 | Fichier | Role |
 |---------|------|
-| `App.jsx` | Composant racine, state global, composition des panels |
-| `hooks/useChromeStorage.js` | Hook sync `chrome.storage` ↔ React state |
+| `App.jsx` | Composant racine, 2 onglets (Custom / Library), 480 px |
+| `hooks/useChromeStorage.js` | Hook sync `chrome.storage` ↔ React state + CRUD presets custom |
 | `components/Header.jsx` | Header gradient + toggle theme sombre |
-| `components/PresetSelector.jsx` | 3 boutons preset (Default, Medium, Fullscreen) |
+| `components/Tabs.jsx` | Barre d'onglets controlee avec badge optionnel |
+| `components/SavePresetBar.jsx` | Bouton pliable → input inline pour sauver un preset |
+| `components/LibraryPanel.jsx` | Liste des presets custom triee par date de creation |
+| `components/PresetCard.jsx` | Carte preset : Apply (clic), Rename (inline), Delete (confirm) |
 | `components/Accordion.jsx` | Accordeon reutilisable avec animation |
 | `components/ModalSizePanel.jsx` | Sliders taille/position + checkbox transparence |
 | `components/EditorSettingsPanel.jsx` | Font size, line height, font family, theme |
 | `components/IndentGuidesPanel.jsx` | Toggle guides, style, highlight actif |
 | `components/DocumentationPanel.jsx` | Toggle doc, position 4 directions, proportion |
-| `components/ActionBar.jsx` | Boutons Save et Reset |
+| `components/ActionBar.jsx` | Bouton Reset (visible uniquement dans l'onglet Custom) |
 | `components/StatusMessage.jsx` | Toast de feedback |
 
 ## Flux de donnees
@@ -147,6 +150,14 @@ Le content script utilise `MutationObserver` sur `document.body` pour detecter l
 - `SidePanelManager` ajoute une poignee entre l'editeur et la documentation.
 - Glisser la poignee ajuste la proportion courante. Cliquer sur la poignee ou double-appuyer sur `Cmd` / `Ctrl` masque ou restaure la documentation.
 
+### Presets custom (bibliotheque)
+
+- `snapshotConfig(config)` extrait les champs snapshotables (definis dans `PRESET_SNAPSHOT_KEYS`) pour exclure `customPresets` du snapshot.
+- `StorageManager.saveCustomPreset(name)` cree un preset avec un UUID, un timestamp et un snapshot de la config courante.
+- `StorageManager.applyCustomPreset(id)` overlay le snapshot sur la config courante en preservant explicitement `customPresets`.
+- Le hook `useChromeStorage` expose `saveCustomPreset`, `applyCustomPreset`, `renameCustomPreset`, `deleteCustomPreset`.
+- `notifyConfigChange` est appele automatiquement apres chaque operation : le content script recoit toujours le push.
+
 ## Principes appliques
 
 1. **SOLID** : une classe = une responsabilite
@@ -162,14 +173,14 @@ Le content script utilise `MutationObserver` sur `document.body` pour detecter l
 
 ### Ajouter un theme
 
-Dans `src/content/style-manager.js`, methode `applyTheme()` :
+1. Dans `src/content/style-manager.js`, methode `applyTheme()`, ajouter dans `themes` :
 
 ```javascript
-const themes = {
-  // ... themes existants
-  solarized: { bg: '#002b36', color: '#839496' },
-};
+mytheme: { bg: '#...', color: '#...' },
 ```
+
+2. Dans `src/shared/config.js`, ajouter la valeur dans `validThemes`.
+3. Dans `src/popup/components/EditorSettingsPanel.jsx`, ajouter l'option dans `THEMES`.
 
 ### Ajouter une police
 
@@ -180,7 +191,7 @@ const themes = {
 
 ### Ajouter un parametre
 
-1. `src/shared/config.js` : ajouter dans `DEFAULT_CONFIG` + `validateConfig()`
+1. `src/shared/config.js` : ajouter dans `DEFAULT_CONFIG` + `validateConfig()`. Si le parametre doit etre inclus dans les presets custom, l'ajouter aussi dans `PRESET_SNAPSHOT_KEYS`.
 2. Creer ou modifier le composant React dans `src/popup/components/`
 3. Implementer la logique dans le content script correspondant
 4. Ajouter ou mettre a jour les tests dans `test/`

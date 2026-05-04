@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Coda Formula Customizer",
-  "version": "2.0.1",
+  "version": "2.2.0",
   "description": "Customize the Coda formula editor: resize, reposition, change fonts, themes and documentation layout",
   "icons": {
     "16": "icons/icon16.png",
