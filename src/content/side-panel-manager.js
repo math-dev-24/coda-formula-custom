@@ -11,8 +11,15 @@ import { clamp } from './utils.js';
 const MIN_PANEL_PERCENT = 10;
 const MAX_PANEL_PERCENT = 90;
 
+const MIN_EDITOR_PROPORTION = 30;
+const MAX_EDITOR_PROPORTION = 80;
+
 export class SidePanelManager {
-  constructor() {
+  /**
+   * @param {(partial: Object) => void} [onUserChange] - Persist partial config from direct gestures
+   */
+  constructor(onUserChange) {
+    this.onUserChange = onUserChange || (() => {});
     this.handles = new WeakMap();
   }
 
@@ -171,6 +178,8 @@ export class SidePanelManager {
       this.cleanupPointer(handle, resizeState);
       if (!resizeState.moved) {
         this.togglePanelVisibility(mainChild, sideChild, position, config);
+      } else {
+        this.persistEditorProportion();
       }
       state.resizeState = null;
     };
@@ -184,6 +193,17 @@ export class SidePanelManager {
     }, { signal: controller.signal });
 
     this.bindModifierToggle(mainChild, sideChild, dialogRoot, position, config, controller);
+  }
+
+  persistEditorProportion() {
+    const panelPercent = sessionState.panelWidthPercent;
+    if (typeof panelPercent !== 'number' || Number.isNaN(panelPercent)) return;
+    const editorProportion = clamp(
+      Math.round(100 - panelPercent),
+      MIN_EDITOR_PROPORTION,
+      MAX_EDITOR_PROPORTION
+    );
+    this.onUserChange({ editorProportion });
   }
 
   cleanupPointer(handle, resizeState) {

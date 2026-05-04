@@ -9,9 +9,9 @@ import { SidePanelManager } from './side-panel-manager.js';
 const BORDER_COLOR = '1px solid rgb(240, 240, 240)';
 
 export class LayoutManager {
-  constructor() {
+  constructor(onUserChange) {
     this.styleManager = new StyleManager();
-    this.sidePanelManager = new SidePanelManager();
+    this.sidePanelManager = new SidePanelManager(onUserChange);
   }
 
   /**

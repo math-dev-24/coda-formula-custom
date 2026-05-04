@@ -13,14 +13,16 @@ import { FormulaEditorEnhancer } from './formula-editor-enhancer.js';
 export class DialogProcessor {
   /**
    * @param {Object} config - Current configuration
+   * @param {(partial: Object) => void} [onUserChange] - Persist partial config from direct gestures
    */
-  constructor(config) {
+  constructor(config, onUserChange) {
     this.config = config;
+    this.onUserChange = onUserChange || (() => {});
     this.domSelector = new DOMSelector();
     this.styleManager = new StyleManager();
     this.modalSizeManager = new ModalSizeManager();
-    this.layoutManager = new LayoutManager();
-    this.dialogInteractionManager = new DialogInteractionManager();
+    this.layoutManager = new LayoutManager(this.onUserChange);
+    this.dialogInteractionManager = new DialogInteractionManager(this.onUserChange);
     this.formulaEditorEnhancer = new FormulaEditorEnhancer();
   }
 

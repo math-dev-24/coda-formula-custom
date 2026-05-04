@@ -22,3 +22,36 @@ test('getPanelPercent clamps remembered session values', () => {
 
   sessionState.panelWidthPercent = null;
 });
+
+test('persistEditorProportion forwards the complementary editor share to onUserChange', () => {
+  const calls = [];
+  const manager = new SidePanelManager(partial => calls.push(partial));
+
+  sessionState.panelWidthPercent = 25;
+  manager.persistEditorProportion();
+  assert.deepEqual(calls, [{ editorProportion: 75 }]);
+
+  sessionState.panelWidthPercent = null;
+});
+
+test('persistEditorProportion clamps the editor share to the validator bounds', () => {
+  const calls = [];
+  const manager = new SidePanelManager(partial => calls.push(partial));
+
+  sessionState.panelWidthPercent = 80;
+  manager.persistEditorProportion();
+  sessionState.panelWidthPercent = 5;
+  manager.persistEditorProportion();
+
+  assert.deepEqual(calls, [{ editorProportion: 30 }, { editorProportion: 80 }]);
+  sessionState.panelWidthPercent = null;
+});
+
+test('persistEditorProportion is a no-op when no panel size has been recorded', () => {
+  const calls = [];
+  const manager = new SidePanelManager(partial => calls.push(partial));
+
+  sessionState.panelWidthPercent = null;
+  manager.persistEditorProportion();
+  assert.deepEqual(calls, []);
+});

@@ -9,13 +9,15 @@ import { DialogProcessor } from './dialog-processor.js';
 export class ModalCustomizer {
   /**
    * @param {Object} config - Current configuration
+   * @param {(partial: Object) => void} [onUserChange] - Persist partial config from direct gestures
    */
-  constructor(config) {
+  constructor(config, onUserChange) {
     this.config = config;
+    this.onUserChange = onUserChange || (() => {});
     this.processedDialogs = new WeakSet();
     this.observer = null;
     this.domSelector = new DOMSelector();
-    this.dialogProcessor = new DialogProcessor(config);
+    this.dialogProcessor = new DialogProcessor(config, this.onUserChange);
   }
 
   /** Initialize: process existing dialogs and start observing */
@@ -48,7 +50,7 @@ export class ModalCustomizer {
       this.domSelector.findDialogs().forEach(dialog => {
         this.dialogProcessor.resetDialog(dialog);
       });
-      this.dialogProcessor = new DialogProcessor(newConfig);
+      this.dialogProcessor = new DialogProcessor(newConfig, this.onUserChange);
       this.processedDialogs = new WeakSet();
       this.processDialogs();
     } else {

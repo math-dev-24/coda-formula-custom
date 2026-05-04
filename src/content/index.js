@@ -4,7 +4,7 @@
  */
 
 import { StorageManager } from '../shared/storage.js';
-import { STORAGE_KEY } from '../shared/config.js';
+import { STORAGE_KEY, mergeConfig, validateConfig } from '../shared/config.js';
 import { ModalCustomizer } from './modal-customizer.js';
 
 const FONT_URLS = [
@@ -41,7 +41,7 @@ class CodaFormulaCustomizer {
       this.loadFonts();
       const config = await StorageManager.getConfig();
       this.lastConfigJSON = JSON.stringify(config);
-      this.customizer = new ModalCustomizer(config);
+      this.customizer = new ModalCustomizer(config, partial => this.persistUserChange(partial));
 
       if (document.readyState === 'loading') {
         window.addEventListener('DOMContentLoaded', () => this.customizer.init());
@@ -55,6 +55,26 @@ class CodaFormulaCustomizer {
     } catch (error) {
       console.error('[Coda Formula Customizer] Initialization error:', error);
     }
+  }
+
+  /**
+   * Persist a partial config change driven by direct user gesture.
+   * Updates lastConfigJSON before saving so the storage echo is deduped
+   * and we avoid a costly layout reset.
+   */
+  persistUserChange(partial) {
+    if (!this.customizer || !partial) return;
+    const merged = mergeConfig({ ...this.customizer.config, ...partial });
+    const json = JSON.stringify(merged);
+    if (json === this.lastConfigJSON) return;
+    if (!validateConfig(merged)) return;
+
+    this.lastConfigJSON = json;
+    this.customizer.config = merged;
+    if (this.customizer.dialogProcessor) {
+      this.customizer.dialogProcessor.config = merged;
+    }
+    StorageManager.saveConfig(merged).catch(() => {});
   }
 
   /** Primary: chrome.storage.onChanged listener */

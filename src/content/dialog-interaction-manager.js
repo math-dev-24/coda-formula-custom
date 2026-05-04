@@ -11,9 +11,15 @@ import { clamp, isInteractiveElement, px } from './utils.js';
 const VIEWPORT_MARGIN = 8;
 const MIN_WIDTH = 480;
 const MIN_HEIGHT = 320;
+const MIN_MODAL_PERCENT = 20;
+const MAX_MODAL_PERCENT = 98;
 
 export class DialogInteractionManager {
-  constructor() {
+  /**
+   * @param {(partial: Object) => void} [onUserChange] - Persist partial config from direct gestures
+   */
+  constructor(onUserChange) {
+    this.onUserChange = onUserChange || (() => {});
     this.enhancements = new WeakMap();
   }
 
@@ -101,6 +107,28 @@ export class DialogInteractionManager {
     };
   }
 
+  /**
+   * Translate the dialog's pixel rect into the config's percentage anchors
+   * (modalLeft/modalTop are 0-100 anchors: 0=flush start, 50=center, 100=flush end —
+   * matching ModalSizeManager.applySize) and persist via onUserChange.
+   */
+  persistRectToConfig(dialogRoot) {
+    const rect = dialogRoot.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    if (rect.width <= 0 || rect.height <= 0 || vw <= 0 || vh <= 0) return;
+
+    const modalWidth = clamp(Math.round((rect.width / vw) * 100), MIN_MODAL_PERCENT, MAX_MODAL_PERCENT);
+    const modalHeight = clamp(Math.round((rect.height / vh) * 100), MIN_MODAL_PERCENT, MAX_MODAL_PERCENT);
+
+    const widthSlack = vw - rect.width;
+    const heightSlack = vh - rect.height;
+    const modalLeft = widthSlack > 0 ? clamp(Math.round((rect.left / widthSlack) * 100), 0, 100) : 50;
+    const modalTop = heightSlack > 0 ? clamp(Math.round((rect.top / heightSlack) * 100), 0, 100) : 50;
+
+    this.onUserChange({ modalWidth, modalHeight, modalLeft, modalTop });
+  }
+
   getDialogHeaderHeight(rect) {
     return Math.min(56, Math.max(36, rect.height * 0.12));
   }
@@ -138,6 +166,7 @@ export class DialogInteractionManager {
       sessionState.dialogMaximized = false;
       sessionState.dialogRestoreRect = null;
       this.rememberDialogRect(dialogRoot);
+      this.persistRectToConfig(dialogRoot);
       return;
     }
 
@@ -146,6 +175,7 @@ export class DialogInteractionManager {
     sessionState.dialogMaximized = true;
     this.applyDialogRect(dialogRoot, this.getMaximizedDialogRect());
     this.rememberDialogRect(dialogRoot);
+    this.persistRectToConfig(dialogRoot);
   }
 
   bindDimming(dialog, dialogRoot, state) {
@@ -268,6 +298,10 @@ export class DialogInteractionManager {
       sessionState.dialogGestureActive = false;
       sessionState.suppressOutsideDimUntil = Date.now() + 500;
     };
+    const finishGesture = () => {
+      this.persistRectToConfig(dialogRoot);
+      suppressDimAfterDialogGesture();
+    };
 
     dialogRoot.addEventListener('pointerdown', event => {
       if (event.button !== 0) return;
@@ -280,12 +314,12 @@ export class DialogInteractionManager {
 
       if (isResizeCorner) {
         sessionState.dialogGestureActive = true;
-        window.addEventListener('pointerup', suppressDimAfterDialogGesture, {
+        window.addEventListener('pointerup', finishGesture, {
           once: true,
           capture: true,
           signal: state.controller.signal,
         });
-        window.addEventListener('pointercancel', suppressDimAfterDialogGesture, {
+        window.addEventListener('pointercancel', finishGesture, {
           once: true,
           capture: true,
           signal: state.controller.signal,
@@ -341,7 +375,7 @@ export class DialogInteractionManager {
       }
       dialogRoot.style.cursor = '';
       this.rememberDialogRect(dialogRoot);
-      suppressDimAfterDialogGesture();
+      finishGesture();
       state.dragState = null;
     };
 
