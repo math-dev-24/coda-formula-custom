@@ -3,7 +3,16 @@
  * ACID principles: Atomicity, Consistency, Isolation, Durability
  */
 
-import { DEFAULT_CONFIG, STORAGE_KEY, validateConfig, mergeConfig, snapshotConfig } from './config.js';
+import {
+  DEFAULT_CONFIG,
+  STORAGE_KEY,
+  validateConfig,
+  mergeConfig,
+  snapshotConfig,
+  createConfigExport,
+  createPresetId,
+  parseConfigImport,
+} from './config.js';
 
 export class StorageManager {
   /**
@@ -77,7 +86,7 @@ export class StorageManager {
       const trimmed = (name || '').trim();
       if (!trimmed) return null;
       const current = await this.getConfig();
-      const id = (crypto.randomUUID && crypto.randomUUID()) || `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const id = createPresetId();
       const preset = { id, name: trimmed, createdAt: Date.now(), config: snapshotConfig(current) };
       const customPresets = { ...(current.customPresets || {}), [id]: preset };
       const success = await this.saveConfig({ ...current, customPresets });
@@ -128,6 +137,38 @@ export class StorageManager {
     } catch (e) {
       console.error('[Coda Formula Customizer] deleteCustomPreset:', e);
       return false;
+    }
+  }
+
+  static async exportCustomPresets() {
+    try {
+      const current = await this.getConfig();
+      return createConfigExport(current);
+    } catch (e) {
+      console.error('[Coda Formula Customizer] exportCustomPresets:', e);
+      return null;
+    }
+  }
+
+  static async importCustomPresets(payload) {
+    try {
+      const importedPresets = parseConfigImport(payload);
+      if (importedPresets.length === 0) return { success: false, imported: 0 };
+
+      const current = await this.getConfig();
+      const customPresets = { ...(current.customPresets || {}) };
+
+      for (const preset of importedPresets) {
+        let id = preset.id;
+        if (customPresets[id]) id = createPresetId();
+        customPresets[id] = { ...preset, id, importedAt: Date.now() };
+      }
+
+      const success = await this.saveConfig({ ...current, customPresets });
+      return { success, imported: success ? importedPresets.length : 0 };
+    } catch (e) {
+      console.error('[Coda Formula Customizer] importCustomPresets:', e);
+      return { success: false, imported: 0 };
     }
   }
 

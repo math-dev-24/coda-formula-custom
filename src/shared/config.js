@@ -4,6 +4,8 @@
  */
 
 export const STORAGE_KEY = 'codaFormulaConfig';
+export const CONFIG_EXPORT_TYPE = 'codaFormulaCustom.configs';
+export const CONFIG_EXPORT_VERSION = 1;
 
 export const DEFAULT_CONFIG = {
   modalWidth: 95,
@@ -38,6 +40,57 @@ export function snapshotConfig(config) {
     if (key in config) snap[key] = config[key];
   }
   return snap;
+}
+
+export function createPresetId() {
+  return (globalThis.crypto?.randomUUID && globalThis.crypto.randomUUID()) || `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function normalizeCustomPreset(preset, fallbackName = 'Imported config') {
+  if (!preset || typeof preset !== 'object') return null;
+
+  const name = String(preset.name || fallbackName).trim();
+  if (!name) return null;
+
+  const config = snapshotConfig(mergeConfig(preset.config || preset));
+  if (!validateConfig({ ...DEFAULT_CONFIG, ...config })) return null;
+
+  return {
+    id: String(preset.id || createPresetId()),
+    name: name.slice(0, 50),
+    createdAt: Number.isFinite(preset.createdAt) ? preset.createdAt : Date.now(),
+    config,
+  };
+}
+
+export function createConfigExport(config) {
+  const presets = Object.values(config?.customPresets || {})
+    .map((preset) => normalizeCustomPreset(preset))
+    .filter(Boolean);
+
+  return {
+    type: CONFIG_EXPORT_TYPE,
+    version: CONFIG_EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    presets,
+  };
+}
+
+export function parseConfigImport(payload) {
+  const source = typeof payload === 'string' ? JSON.parse(payload) : payload;
+  if (!source || typeof source !== 'object') return [];
+
+  const rawPresets = Array.isArray(source)
+    ? source
+    : Array.isArray(source.presets)
+      ? source.presets
+      : source.customPresets && typeof source.customPresets === 'object'
+        ? Object.values(source.customPresets)
+        : [];
+
+  return rawPresets
+    .map((preset, index) => normalizeCustomPreset(preset, `Imported config ${index + 1}`))
+    .filter(Boolean);
 }
 
 /**

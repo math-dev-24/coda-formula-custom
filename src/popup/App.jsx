@@ -71,6 +71,7 @@ export default function App() {
   const {
     config, updateConfig, resetConfig, loading, status,
     saveCustomPreset, applyCustomPreset, renameCustomPreset, deleteCustomPreset,
+    exportCustomPresets, importCustomPresets,
   } = useChromeStorage();
   const [tab, setTab] = useState('custom');
 
@@ -137,6 +138,8 @@ export default function App() {
               onApply={applyCustomPreset}
               onRename={renameCustomPreset}
               onDelete={deleteCustomPreset}
+              onExport={exportCustomPresets}
+              onImport={importCustomPresets}
             />
           </div>
         )}

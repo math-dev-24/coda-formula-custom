@@ -10,6 +10,7 @@ Extension Chrome (Manifest V3) pour personnaliser l'editeur de formules Coda. Re
 - **Appliquer** un preset d'un clic depuis l'onglet Library
 - **Renommer** un preset en cliquant l'icone crayon (edition inline)
 - **Supprimer** un preset avec confirmation native
+- **Exporter / importer** la bibliotheque de presets en JSON depuis l'onglet Library
 - Les presets capturent un snapshot complet de la configuration (taille modale, editeur, guides, documentation) sans inclure la bibliotheque elle-meme
 
 ### Modale
@@ -123,7 +124,7 @@ coda-formula-custom/
             ├── Header.jsx        # Header + theme toggle
             ├── Tabs.jsx          # Barre d'onglets avec badge
             ├── SavePresetBar.jsx # Bouton pliable pour sauver un preset
-            ├── LibraryPanel.jsx  # Liste des presets custom
+            ├── LibraryPanel.jsx  # Liste des presets custom + import/export JSON
             ├── PresetCard.jsx    # Carte preset (apply / rename / delete)
             ├── Accordion.jsx     # Accordeon reutilisable
             ├── ModalSizePanel.jsx

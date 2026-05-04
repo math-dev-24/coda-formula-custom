@@ -94,5 +94,39 @@ export function useChromeStorage() {
     }
   }, [showStatus]);
 
-  return { config, updateConfig, resetConfig, loading, status, saveCustomPreset, applyCustomPreset, renameCustomPreset, deleteCustomPreset };
+  const exportCustomPresets = useCallback(async () => {
+    const exported = await StorageManager.exportCustomPresets();
+    if (!exported) {
+      showStatus('Could not export configs', 'error');
+      return null;
+    }
+    showStatus('Configs exported', 'success');
+    return exported;
+  }, [showStatus]);
+
+  const importCustomPresets = useCallback(async (payload) => {
+    const result = await StorageManager.importCustomPresets(payload);
+    if (result.success) {
+      const cfg = await StorageManager.getConfig();
+      setConfig(cfg);
+      showStatus(`${result.imported} config${result.imported > 1 ? 's' : ''} imported`, 'success');
+      return result;
+    }
+    showStatus('Could not import configs', 'error');
+    return result;
+  }, [showStatus]);
+
+  return {
+    config,
+    updateConfig,
+    resetConfig,
+    loading,
+    status,
+    saveCustomPreset,
+    applyCustomPreset,
+    renameCustomPreset,
+    deleteCustomPreset,
+    exportCustomPresets,
+    importCustomPresets,
+  };
 }

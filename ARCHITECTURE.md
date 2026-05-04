@@ -155,7 +155,9 @@ Le content script utilise `MutationObserver` sur `document.body` pour detecter l
 - `snapshotConfig(config)` extrait les champs snapshotables (definis dans `PRESET_SNAPSHOT_KEYS`) pour exclure `customPresets` du snapshot.
 - `StorageManager.saveCustomPreset(name)` cree un preset avec un UUID, un timestamp et un snapshot de la config courante.
 - `StorageManager.applyCustomPreset(id)` overlay le snapshot sur la config courante en preservant explicitement `customPresets`.
-- Le hook `useChromeStorage` expose `saveCustomPreset`, `applyCustomPreset`, `renameCustomPreset`, `deleteCustomPreset`.
+- `StorageManager.exportCustomPresets()` produit un JSON versionne avec la bibliotheque de presets.
+- `StorageManager.importCustomPresets(payload)` valide les presets importes et les fusionne avec la bibliotheque existante.
+- Le hook `useChromeStorage` expose `saveCustomPreset`, `applyCustomPreset`, `renameCustomPreset`, `deleteCustomPreset`, `exportCustomPresets`, `importCustomPresets`.
 - `notifyConfigChange` est appele automatiquement apres chaque operation : le content script recoit toujours le push.
 
 ## Principes appliques
