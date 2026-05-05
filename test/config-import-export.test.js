@@ -10,6 +10,7 @@ import {
   isPresetActive,
   parseConfigImport,
   toggleDocumentationInConfig,
+  validateConfig,
 } from '../src/shared/config.js';
 
 const preset = {
@@ -71,6 +72,13 @@ test('parseConfigImport skips invalid configs', () => {
 
   assert.equal(imported.length, 1);
   assert.equal(imported[0].name, preset.name);
+});
+
+test('validateConfig rejects malformed imported scalar values', () => {
+  assert.equal(validateConfig({ ...preset.config, modalWidth: '90' }), false);
+  assert.equal(validateConfig({ ...preset.config, editorLineHeight: Number.NaN }), false);
+  assert.equal(validateConfig({ ...preset.config, showDocumentation: 'true' }), false);
+  assert.equal(validateConfig(preset.config), true);
 });
 
 test('preset helpers apply configs while preserving the library', () => {

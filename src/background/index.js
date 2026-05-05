@@ -1,4 +1,7 @@
 import { StorageManager } from '../shared/storage.js';
+import { SUPPORTED_TAB_URL_PATTERNS } from '../shared/config.js';
+
+const SUPPORTED_APP_URL_RE = /^https?:\/\/(?:[^/]+\.)?(?:coda\.io\/d\/|grammarly\.com\/)/;
 
 async function applyNextPreset() {
   const liveSuccess = await sendCommandToActiveCodaTab({ type: 'APPLY_NEXT_PRESET_COMMAND' });
@@ -17,7 +20,7 @@ async function toggleDocumentation() {
 async function sendCommandToActiveCodaTab(message) {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id || !tab.url || !/^https?:\/\/[^/]*\.?coda\.io\/d\//.test(tab.url)) return false;
+    if (!tab?.id || !tab.url || !SUPPORTED_APP_URL_RE.test(tab.url)) return false;
 
     const response = await chrome.tabs.sendMessage(tab.id, message);
     return Boolean(response?.success);
@@ -27,7 +30,7 @@ async function sendCommandToActiveCodaTab(message) {
 }
 
 async function broadcastConfigUpdate(config) {
-  const tabs = await chrome.tabs.query({ url: '*://*.coda.io/d/*' });
+  const tabs = await chrome.tabs.query({ url: SUPPORTED_TAB_URL_PATTERNS });
   await Promise.all(tabs.map(tab => (
     chrome.tabs.sendMessage(tab.id, {
       type: 'CONFIG_UPDATE',

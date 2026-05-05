@@ -1,6 +1,6 @@
 # Coda Formula Customizer
 
-Extension Chrome (Manifest V3) pour personnaliser l'editeur de formules Coda. Redimensionnez la modale, ajustez les polices, appliquez des themes, gerez une bibliotheque de presets et controlez le panneau de documentation.
+Extension Chrome (Manifest V3) utilisable sur `coda.io` et `grammarly.com`. Elle personnalise l'editeur de formules Coda : redimensionnez la modale, ajustez les polices, appliquez des themes, gerez une bibliotheque de presets et controlez le panneau de documentation.
 
 Version actuelle : **2.3.0**.
 
@@ -243,7 +243,7 @@ div[data-coda-ui-id="formula-editor"]          /* Editeur de formule */
 
 | Probleme | Solution |
 |----------|---------|
-| L'extension ne fonctionne pas | Verifier que la page est sur `coda.io/d/*`, rafraichir la page |
+| L'extension ne fonctionne pas | Verifier que la page est sur `coda.io/d/*` ou `grammarly.com/*`, puis rafraichir la page |
 | Les changements ne s'appliquent pas | Rafraichir la page Coda, ouvrir une nouvelle modale de formule |
 | Un raccourci ne marche pas | Ouvrir `chrome://extensions/shortcuts` et verifier que le raccourci n'est pas pris par une autre extension |
 | Reinitialisation | Cliquer sur "Reset to defaults" dans l'onglet Custom |
@@ -252,7 +252,7 @@ div[data-coda-ui-id="formula-editor"]          /* Editeur de formule */
 
 - Chrome 88+ (Manifest V3)
 - Permissions : `storage`, `activeTab`, `tabs`
-- Host permissions : `*://*.coda.io/*`
+- Host permissions : `*://*.coda.io/d/*`, `*://*.grammarly.com/*`
 
 ## Licence
 

@@ -6,6 +6,7 @@
 import {
   DEFAULT_CONFIG,
   STORAGE_KEY,
+  SUPPORTED_TAB_URL_PATTERNS,
   validateConfig,
   mergeConfig,
   snapshotConfig,
@@ -80,7 +81,7 @@ export class StorageManager {
         return;
       }
 
-      const tabs = await chrome.tabs.query({ url: '*://*.coda.io/d/*' });
+      const tabs = await chrome.tabs.query({ url: SUPPORTED_TAB_URL_PATTERNS });
       for (const tab of tabs) {
         chrome.tabs.sendMessage(tab.id, {
           type: 'CONFIG_UPDATE',

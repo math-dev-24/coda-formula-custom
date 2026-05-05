@@ -6,6 +6,7 @@
 export const STORAGE_KEY = 'codaFormulaConfig';
 export const CONFIG_EXPORT_TYPE = 'codaFormulaCustom.configs';
 export const CONFIG_EXPORT_VERSION = 1;
+export const SUPPORTED_TAB_URL_PATTERNS = ['*://*.coda.io/d/*', '*://*.grammarly.com/*'];
 
 export const DEFAULT_CONFIG = {
   modalWidth: 95,
@@ -100,28 +101,42 @@ export function parseConfigImport(payload) {
  */
 export function validateConfig(config) {
   if (!config) return false;
-  if (config.modalWidth < 20 || config.modalWidth > 98) return false;
-  if (config.modalHeight < 20 || config.modalHeight > 98) return false;
-  if (config.modalLeft < 0 || config.modalLeft > 100) return false;
-  if (config.modalTop < 0 || config.modalTop > 100) return false;
+  if (!isFiniteNumber(config.modalWidth, 20, 98)) return false;
+  if (!isFiniteNumber(config.modalHeight, 20, 98)) return false;
+  if (!isFiniteNumber(config.modalLeft, 0, 100)) return false;
+  if (!isFiniteNumber(config.modalTop, 0, 100)) return false;
+
+  if (!isBoolean(config.transparentBackground)) return false;
+  if (!isBoolean(config.showDocumentation)) return false;
+  if (!isBoolean(config.showIndentGuides)) return false;
+  if (!isBoolean(config.highlightActiveIndent)) return false;
 
   const validPositions = ['left', 'right', 'top', 'bottom', 'none'];
   if (!validPositions.includes(config.documentationPosition)) return false;
-  if (config.editorProportion < 30 || config.editorProportion > 80) return false;
+  if (!isFiniteNumber(config.editorProportion, 30, 80)) return false;
+  if (!isFiniteNumber(config.documentationProportion, 20, 70)) return false;
 
-  if (config.editorFontSize && (config.editorFontSize < 10 || config.editorFontSize > 24)) return false;
-  if (config.editorLineHeight && (config.editorLineHeight < 1.0 || config.editorLineHeight > 2.5)) return false;
+  if (!isFiniteNumber(config.editorFontSize, 10, 24)) return false;
+  if (!isFiniteNumber(config.editorLineHeight, 1.0, 2.5)) return false;
 
   const validFonts = ['monospace', 'fira-code', 'jetbrains-mono', 'source-code-pro', 'opendyslexic'];
-  if (config.editorFontFamily && !validFonts.includes(config.editorFontFamily)) return false;
+  if (!validFonts.includes(config.editorFontFamily)) return false;
 
   const validThemes = ['light', 'dark', 'sepia', 'high-contrast', 'protanopia', 'deuteranopia', 'tritanopia', 'solarized', 'monokai', 'dracula'];
-  if (config.editorTheme && !validThemes.includes(config.editorTheme)) return false;
+  if (!validThemes.includes(config.editorTheme)) return false;
 
   const validIndentStyles = ['solid', 'dotted', 'dashed'];
-  if (config.indentGuideStyle && !validIndentStyles.includes(config.indentGuideStyle)) return false;
+  if (!validIndentStyles.includes(config.indentGuideStyle)) return false;
 
   return true;
+}
+
+function isFiniteNumber(value, min, max) {
+  return Number.isFinite(value) && value >= min && value <= max;
+}
+
+function isBoolean(value) {
+  return typeof value === 'boolean';
 }
 
 /**
@@ -130,10 +145,11 @@ export function validateConfig(config) {
  * @returns {Object} Merged configuration
  */
 export function mergeConfig(userConfig) {
+  const input = userConfig || {};
   return {
     ...DEFAULT_CONFIG,
-    ...userConfig,
-    documentationProportion: 100 - (userConfig.editorProportion || DEFAULT_CONFIG.editorProportion),
+    ...input,
+    documentationProportion: 100 - (input.editorProportion || DEFAULT_CONFIG.editorProportion),
   };
 }
 

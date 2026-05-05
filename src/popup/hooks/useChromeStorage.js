@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { StorageManager } from '../../shared/storage.js';
-import { DEFAULT_CONFIG } from '../../shared/config.js';
+import { DEFAULT_CONFIG, STORAGE_KEY, mergeConfig } from '../../shared/config.js';
 
 /**
  * Hook to sync React state with chrome.storage.local
@@ -9,6 +9,7 @@ export function useChromeStorage() {
   const [config, setConfig] = useState({ ...DEFAULT_CONFIG });
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState({ message: '', type: '' });
+  const statusTimeoutRef = useRef(null);
 
   useEffect(() => {
     StorageManager.getConfig().then(cfg => {
@@ -17,9 +18,26 @@ export function useChromeStorage() {
     });
   }, []);
 
+  useEffect(() => {
+    const listener = (changes, areaName) => {
+      if (areaName !== 'local' || !changes[STORAGE_KEY]?.newValue) return;
+      setConfig(mergeConfig(changes[STORAGE_KEY].newValue));
+    };
+
+    chrome.storage?.onChanged?.addListener(listener);
+    return () => {
+      chrome.storage?.onChanged?.removeListener(listener);
+      if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+    };
+  }, []);
+
   const showStatus = useCallback((message, type) => {
+    if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
     setStatus({ message, type });
-    setTimeout(() => setStatus({ message: '', type: '' }), 3000);
+    statusTimeoutRef.current = setTimeout(() => {
+      setStatus({ message: '', type: '' });
+      statusTimeoutRef.current = null;
+    }, 3000);
   }, []);
 
   const saveConfig = useCallback(async (newConfig) => {

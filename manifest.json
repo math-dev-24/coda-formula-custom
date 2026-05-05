@@ -10,7 +10,7 @@
     "128": "icons/icon128.png"
   },
   "permissions": ["storage", "activeTab", "tabs"],
-  "host_permissions": ["*://*.coda.io/*"],
+  "host_permissions": ["*://*.coda.io/d/*", "*://*.grammarly.com/*"],
   "background": {
     "service_worker": "src/background/index.js",
     "type": "module"
@@ -44,7 +44,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://*.coda.io/d/*"],
+      "matches": ["*://*.coda.io/d/*", "*://*.grammarly.com/*"],
       "js": ["src/content/index.js"],
       "run_at": "document_idle"
     }

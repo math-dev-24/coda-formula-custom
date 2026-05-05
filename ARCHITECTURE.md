@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-Extension Chrome (Manifest V3) qui personnalise l'editeur de formules Coda. Le popup est une app React 19, le content script est du JavaScript vanilla. Vite + @crxjs/vite-plugin gerent le build.
+Extension Chrome (Manifest V3) utilisable sur `coda.io` et `grammarly.com`. Elle personnalise l'editeur de formules Coda. Le popup est une app React 19, le content script est du JavaScript vanilla. Vite + @crxjs/vite-plugin gerent le build.
 
 Version actuelle : **2.3.0**.
 
@@ -30,7 +30,7 @@ Importe par le popup ET le content script. Source unique de verite.
 
 ### `src/content/` — Content Script
 
-Injecte dans les pages `coda.io/d/*`. Architecture SOLID avec des managers specialises :
+Injecte dans les pages `coda.io/d/*` et `grammarly.com/*`. Architecture SOLID avec des managers specialises :
 
 | Classe | Pattern | Responsabilite |
 |--------|---------|---------------|

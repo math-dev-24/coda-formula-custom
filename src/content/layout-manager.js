@@ -12,6 +12,7 @@ export class LayoutManager {
   constructor(onUserChange) {
     this.styleManager = new StyleManager();
     this.sidePanelManager = new SidePanelManager(onUserChange);
+    this.sideObservers = new WeakMap();
   }
 
   /**
@@ -159,8 +160,10 @@ export class LayoutManager {
    * @param {HTMLElement} sideChild - Documentation element
    */
   observeSideChild(sideChild) {
+    this.sideObservers.get(sideChild)?.disconnect();
     const observer = new MutationObserver(() => this.adjustSideChildLayout(sideChild));
     observer.observe(sideChild, { childList: true, subtree: true, attributes: true });
+    this.sideObservers.set(sideChild, observer);
   }
 
   /**
@@ -183,6 +186,8 @@ export class LayoutManager {
     });
 
     Array.from(target.children).forEach(child => {
+      this.sideObservers.get(child)?.disconnect();
+      this.sideObservers.delete(child);
       child.classList.remove('cfw-panel-main', 'cfw-panel-side', 'cfw-panel-layout');
       this.styleManager.resetStyles(child);
     });
