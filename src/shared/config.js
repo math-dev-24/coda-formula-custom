@@ -22,6 +22,9 @@ export const DEFAULT_CONFIG = {
   editorLineHeight: 1.5,
   editorFontFamily: 'monospace',
   editorTheme: 'light',
+  focusMode: false,
+  highlightLongLines: true,
+  longLineColumn: 120,
   showIndentGuides: true,
   indentGuideStyle: 'dotted',
   highlightActiveIndent: true,
@@ -32,6 +35,7 @@ export const PRESET_SNAPSHOT_KEYS = [
   'modalWidth', 'modalHeight', 'modalLeft', 'modalTop', 'transparentBackground',
   'showDocumentation', 'documentationPosition', 'editorProportion', 'documentationProportion',
   'editorFontSize', 'editorLineHeight', 'editorFontFamily', 'editorTheme',
+  'focusMode', 'highlightLongLines', 'longLineColumn',
   'showIndentGuides', 'indentGuideStyle', 'highlightActiveIndent',
 ];
 
@@ -108,6 +112,8 @@ export function validateConfig(config) {
 
   if (!isBoolean(config.transparentBackground)) return false;
   if (!isBoolean(config.showDocumentation)) return false;
+  if (!isBoolean(config.focusMode)) return false;
+  if (!isBoolean(config.highlightLongLines)) return false;
   if (!isBoolean(config.showIndentGuides)) return false;
   if (!isBoolean(config.highlightActiveIndent)) return false;
 
@@ -118,6 +124,7 @@ export function validateConfig(config) {
 
   if (!isFiniteNumber(config.editorFontSize, 10, 24)) return false;
   if (!isFiniteNumber(config.editorLineHeight, 1.0, 2.5)) return false;
+  if (!isFiniteNumber(config.longLineColumn, 80, 200)) return false;
 
   const validFonts = ['monospace', 'fira-code', 'jetbrains-mono', 'source-code-pro', 'opendyslexic'];
   if (!validFonts.includes(config.editorFontFamily)) return false;
@@ -161,7 +168,8 @@ export function getSortedCustomPresets(config) {
 
 export function isPresetActive(config, preset) {
   if (!config || !preset?.config) return false;
-  return PRESET_SNAPSHOT_KEYS.every(key => config[key] === preset.config[key]);
+  const normalizedPresetConfig = mergeConfig(preset.config);
+  return PRESET_SNAPSHOT_KEYS.every(key => config[key] === normalizedPresetConfig[key]);
 }
 
 export function applyPresetToConfig(config, presetId) {

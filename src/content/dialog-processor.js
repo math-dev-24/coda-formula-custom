@@ -39,7 +39,7 @@ export class DialogProcessor {
     this.dialogInteractionManager.enhance(dialog, rootDiv);
 
     this.styleManager.applyEditorStyles(formulaDiv, this.config);
-    this.formulaEditorEnhancer.enhance(formulaDiv);
+    this.formulaEditorEnhancer.enhance(formulaDiv, this.config);
 
     const target = this.domSelector.findTargetContainer(rootDiv);
     if (!target) return;
@@ -60,6 +60,7 @@ export class DialogProcessor {
    */
   applyStyles(formulaDiv, config) {
     this.styleManager.applyEditorStyles(formulaDiv, config);
+    this.formulaEditorEnhancer.updateConfig(formulaDiv, config);
   }
 
   /**

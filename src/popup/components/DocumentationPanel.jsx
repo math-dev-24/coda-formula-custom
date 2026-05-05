@@ -1,4 +1,5 @@
 import ToggleSwitch from './ToggleSwitch';
+import { CODA_FORMULA_SNIPPETS } from '../../shared/formula-snippets.js';
 
 const POSITIONS = [
   {
@@ -20,6 +21,10 @@ const POSITIONS = [
 ];
 
 export default function DocumentationPanel({ config, onChange }) {
+  const copySnippet = async (snippet) => {
+    await navigator.clipboard?.writeText?.(snippet).catch(() => {});
+  };
+
   return (
     <>
       <ToggleSwitch
@@ -60,6 +65,26 @@ export default function DocumentationPanel({ config, onChange }) {
               <span>More doc</span><span>More editor</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 overflow-hidden">
+        <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700 text-[12px] font-semibold text-gray-700 dark:text-gray-200">
+          Formula cheatsheet
+        </div>
+        <div className="divide-y divide-gray-100 dark:divide-gray-700">
+          {CODA_FORMULA_SNIPPETS.map(item => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => copySnippet(item.snippet)}
+              className="w-full px-3 py-2 text-left hover:bg-white dark:hover:bg-gray-750 transition-colors"
+              title="Copy snippet"
+            >
+              <span className="block text-[12px] font-semibold text-gray-800 dark:text-gray-100">{item.name}</span>
+              <code className="block mt-0.5 text-[11px] text-coda-600 dark:text-coda-400 truncate">{item.signature}</code>
+            </button>
+          ))}
         </div>
       </div>
     </>

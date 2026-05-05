@@ -83,3 +83,11 @@ test('separate collapsed rows are used only for complex closing lines', () => {
   assert.equal(enhancer.shouldUseSeparateCollapsedLine('  ), OtherArg'), true);
   assert.equal(enhancer.shouldUseSeparateCollapsedLine('  }))'), true);
 });
+
+test('long line detection follows the configured column', () => {
+  const enhancer = new FormulaEditorEnhancer();
+
+  assert.equal(enhancer.isLongLine('x'.repeat(121), { highlightLongLines: true, longLineColumn: 120 }), true);
+  assert.equal(enhancer.isLongLine('x'.repeat(120), { highlightLongLines: true, longLineColumn: 120 }), false);
+  assert.equal(enhancer.isLongLine('x'.repeat(180), { highlightLongLines: false, longLineColumn: 120 }), false);
+});

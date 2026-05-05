@@ -31,6 +31,7 @@ const PALETTE_COMMANDS = [
   ['/doc left', 'Move documentation to the left'],
   ['/doc top', 'Move documentation to the top'],
   ['/doc bottom', 'Move documentation to the bottom'],
+  ['/fn filter', 'Copy a common formula snippet'],
   ['Preset name', 'Apply a saved configuration by name'],
 ];
 
@@ -96,6 +97,20 @@ export default function CommandsPanel() {
           </div>
         ))}
       </Section>
+
+      <Section title="Formula Cheatsheet" icon={<SlashIcon />}>
+        {CODA_FORMULA_SNIPPETS.map(item => (
+          <div key={item.id} className="grid grid-cols-[118px_1fr] gap-3 p-3">
+            <code className="min-w-0 text-[12px] font-semibold text-coda-600 dark:text-coda-400 truncate">
+              /fn {item.id}
+            </code>
+            <p className="min-w-0 text-[12px] leading-snug text-gray-600 dark:text-gray-300">
+              {item.signature}
+            </p>
+          </div>
+        ))}
+      </Section>
     </div>
   );
 }
+import { CODA_FORMULA_SNIPPETS } from '../../shared/formula-snippets.js';

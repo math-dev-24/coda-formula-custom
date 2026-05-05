@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 
-export default function PresetCard({ preset, onApply, onRename, onDelete }) {
+export default function PresetCard({ preset, onApply, onRename, onDuplicate, onDelete }) {
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState(preset.name);
   const inputRef = useRef(null);
 
   useEffect(() => {
-    if (renaming) { inputRef.current?.focus(); inputRef.current?.select(); }
+    if (renaming) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
   }, [renaming]);
 
   const commitRename = async () => {
@@ -20,8 +23,14 @@ export default function PresetCard({ preset, onApply, onRename, onDelete }) {
   };
 
   const handleKey = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); commitRename(); }
-    if (e.key === 'Escape') { setDraft(preset.name); setRenaming(false); }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commitRename();
+    }
+    if (e.key === 'Escape') {
+      setDraft(preset.name);
+      setRenaming(false);
+    }
   };
 
   const handleDelete = (e) => {
@@ -56,14 +65,32 @@ export default function PresetCard({ preset, onApply, onRename, onDelete }) {
         )}
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button type="button" onClick={(e) => { e.stopPropagation(); setRenaming(true); }}
-            className="p-1 text-gray-400 hover:text-coda-500" title="Rename">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setRenaming(true); }}
+            className="p-1 text-gray-400 hover:text-coda-500"
+            title="Rename"
+          >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
             </svg>
           </button>
-          <button type="button" onClick={handleDelete}
-            className="p-1 text-gray-400 hover:text-red-500" title="Delete">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDuplicate?.(preset.id); }}
+            className="p-1 text-gray-400 hover:text-coda-500"
+            title="Duplicate"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="p-1 text-gray-400 hover:text-red-500"
+            title="Delete"
+          >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="3 6 5 6 21 6" /><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6" />
             </svg>
@@ -72,8 +99,9 @@ export default function PresetCard({ preset, onApply, onRename, onDelete }) {
       </div>
 
       <div className="mt-1.5 flex flex-wrap gap-1 text-[10px]">
-        <span className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{c.modalWidth}×{c.modalHeight}%</span>
+        <span className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{c.modalWidth}x{c.modalHeight}%</span>
         {c.editorTheme && <span className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{c.editorTheme}</span>}
+        {c.documentationPosition && <span className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">doc {c.documentationPosition}</span>}
         {c.editorFontFamily && c.editorFontFamily !== 'monospace' && (
           <span className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{c.editorFontFamily}</span>
         )}

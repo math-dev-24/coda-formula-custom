@@ -12,6 +12,8 @@ Version actuelle : **2.3.0**.
 - **Appliquer** un preset d'un clic depuis l'onglet Library
 - **Switcher rapidement** avec la palette `Alt/Option+Shift+P`, puis `/next` ou le nom du preset
 - **Renommer** un preset en cliquant l'icone crayon (edition inline)
+- **Dupliquer** un preset depuis l'onglet Library
+- **Rechercher** dans la bibliotheque par nom, theme, police ou position de documentation
 - **Supprimer** un preset avec confirmation native
 - **Exporter / importer** la bibliotheque de presets en JSON depuis l'onglet Library
 - Les presets capturent un snapshot complet de la configuration (taille modale, editeur, guides, documentation) sans inclure la bibliotheque elle-meme
@@ -24,6 +26,7 @@ Version actuelle : **2.3.0**.
 - **Preset suivant** : `Alt/Option+Shift+N` applique le prochain preset sauvegarde
 - **Documentation** : `Alt/Option+Shift+D` affiche ou masque la documentation
 - **Onglet Commands** : la popup liste les raccourcis clavier et les alias de palette disponibles
+- **Snippets rapides** : `/fn filter`, `/fn withname`, `/fn switchif`, `/fn runactions`, `/fn formula-map`
 
 ### Modale
 
@@ -39,6 +42,8 @@ Version actuelle : **2.3.0**.
 
 - **Folding** : plier / deplier les blocs de formule imbriques avec les controles dans la gouttiere
 - **Lignes longues** : pas de retour automatique a la ligne, scroll horizontal dans l'editeur
+- **Marqueurs de lignes longues** : seuil reglable pour reperer les formules difficiles a scanner
+- **Mode focus** : masque temporairement la documentation pour concentrer l'espace sur l'editeur
 - **Taille de police** : de 10 a 24 px
 - **Hauteur de ligne** : de 1.0 a 2.5
 - **Polices** : Monospace, Fira Code, JetBrains Mono, Source Code Pro, OpenDyslexic
@@ -53,6 +58,7 @@ Version actuelle : **2.3.0**.
 - **Resize live** : poignee entre l'editeur et la documentation
 - **Masquage rapide** : clic sur la poignee ou double appui sur `Cmd` / `Ctrl`
 - **Toggle live** : le masquage via raccourci ou palette ajuste le panneau en place, sans refresh de Coda
+- **Cheatsheet** : fonctions courantes copiables depuis le panneau Documentation de la popup
 
 ## Stack technique
 
@@ -198,6 +204,9 @@ Popup (React) → useChromeStorage hook
   editorLineHeight: 1.5,           // 1.0-2.5
   editorFontFamily: 'monospace',   // monospace | fira-code | jetbrains-mono | source-code-pro | opendyslexic
   editorTheme: 'light',            // light | dark | sepia | high-contrast | solarized | monokai | dracula | protanopia | deuteranopia | tritanopia
+  focusMode: false,
+  highlightLongLines: true,
+  longLineColumn: 120,             // 80-200
   showIndentGuides: true,
   indentGuideStyle: 'dotted',      // solid | dotted | dashed
   highlightActiveIndent: true,

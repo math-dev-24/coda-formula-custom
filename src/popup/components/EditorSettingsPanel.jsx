@@ -56,6 +56,21 @@ export default function EditorSettingsPanel({ config, onChange }) {
         onChange={e => onChange('editorFontFamily', e.target.value)} />
       <Select label="Editor Theme" value={config.editorTheme} options={THEMES}
         onChange={e => onChange('editorTheme', e.target.value)} />
+      <div className="pt-1 space-y-2.5">
+        <ToggleSwitch
+          checked={config.focusMode}
+          onChange={v => onChange('focusMode', v)}
+          label="Focus mode"
+        />
+        <ToggleSwitch
+          checked={config.highlightLongLines}
+          onChange={v => onChange('highlightLongLines', v)}
+          label="Long line markers"
+        />
+        <Slider label="Long Line Column" value={config.longLineColumn} unit="" min={80} max={200} step={5}
+          onChange={e => onChange('longLineColumn', parseInt(e.target.value))} />
+      </div>
     </>
   );
 }
+import ToggleSwitch from './ToggleSwitch';

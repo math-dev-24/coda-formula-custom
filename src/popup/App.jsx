@@ -12,6 +12,7 @@ import DocumentationPanel from './components/DocumentationPanel';
 import ActionBar from './components/ActionBar';
 import StatusMessage from './components/StatusMessage';
 import CommandsPanel from './components/CommandsPanel';
+import { isPresetActive } from '../shared/config.js';
 
 const ModalIcon = () => (
   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -79,8 +80,9 @@ function SkeletonLoader() {
 export default function App() {
   const {
     config, updateConfig, resetConfig, loading, status,
+    activeTab,
     saveCustomPreset, applyCustomPreset, renameCustomPreset, deleteCustomPreset,
-    exportCustomPresets, importCustomPresets,
+    duplicateCustomPreset, exportCustomPresets, importCustomPresets,
   } = useChromeStorage();
   const [tab, setTab] = useState('custom');
 
@@ -91,12 +93,25 @@ export default function App() {
   if (loading) return <SkeletonLoader />;
 
   const presetCount = Object.keys(config.customPresets || {}).length;
+  const activePreset = Object.values(config.customPresets || {}).find(preset => isPresetActive(config, preset));
 
   return (
     <div className="w-[480px] min-h-[600px] flex flex-col bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-sans text-sm antialiased transition-colors duration-200">
       <div className="animate-in"><Header /></div>
 
       <div className="px-4 pt-3">
+        <div className={`mb-2 flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-[11px] ${
+          activeTab.supported
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-300'
+            : 'border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400'
+        }`}>
+          <span className="min-w-0 truncate">{activeTab.label}</span>
+          {activePreset && (
+            <span className="max-w-[190px] truncate rounded bg-white/70 px-2 py-0.5 font-medium dark:bg-gray-900/50">
+              {activePreset.name}
+            </span>
+          )}
+        </div>
         <Tabs
           active={tab}
           onChange={setTab}
@@ -147,6 +162,7 @@ export default function App() {
               presets={config.customPresets}
               onApply={applyCustomPreset}
               onRename={renameCustomPreset}
+              onDuplicate={duplicateCustomPreset}
               onDelete={deleteCustomPreset}
               onExport={exportCustomPresets}
               onImport={importCustomPresets}

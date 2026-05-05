@@ -158,6 +158,29 @@ export class StorageManager {
     }
   }
 
+  static async duplicateCustomPreset(id) {
+    try {
+      const current = await this.getConfig();
+      const preset = current.customPresets?.[id];
+      if (!preset) return null;
+
+      const duplicateId = createPresetId();
+      const baseName = preset.name || 'Preset';
+      const nextPreset = {
+        ...preset,
+        id: duplicateId,
+        name: `${baseName} copy`.slice(0, 50),
+        createdAt: Date.now(),
+      };
+      const customPresets = { ...current.customPresets, [duplicateId]: nextPreset };
+      const success = await this.saveConfig({ ...current, customPresets });
+      return success ? duplicateId : null;
+    } catch (e) {
+      console.error('[Coda Formula Customizer] duplicateCustomPreset:', e);
+      return null;
+    }
+  }
+
   static async deleteCustomPreset(id) {
     try {
       const current = await this.getConfig();

@@ -13,7 +13,7 @@ export class FormulaEditorEnhancer {
     this.enhancements = new WeakMap();
   }
 
-  enhance(formulaEditor) {
+  enhance(formulaEditor, config = {}) {
     if (!formulaEditor || this.enhancements.has(formulaEditor)) return;
 
     const editable = formulaEditor.querySelector('[data-coda-ui-id="editable"][contenteditable="true"]');
@@ -53,11 +53,20 @@ export class FormulaEditorEnhancer {
       editorObserver: null,
       editorResizeObserver: null,
       closeObserver: null,
+      config,
     };
 
     this.enhancements.set(formulaEditor, state);
     this.bindEditor(formulaEditor, state);
     this.refreshEditorDecorations(formulaEditor, state);
+  }
+
+  updateConfig(formulaEditor, config = {}) {
+    const state = this.enhancements.get(formulaEditor);
+    if (!state) return;
+    state.config = config;
+    formulaEditor.classList.toggle('cfw-focus-mode', Boolean(config.focusMode));
+    this.queueRefreshEditorDecorations(formulaEditor, state);
   }
 
   reset(formulaEditor) {
@@ -80,6 +89,7 @@ export class FormulaEditorEnhancer {
       line.style.marginTop = '';
       line.style.display = '';
       delete line.dataset.codaFormulaFolded;
+      delete line.dataset.codaFormulaLongLine;
     });
     this.enhancements.delete(formulaEditor);
   }
@@ -241,6 +251,7 @@ export class FormulaEditorEnhancer {
 
     lineInfos.forEach((info, index) => {
       info.line.classList.add('cfw-formula-line');
+      info.line.dataset.codaFormulaLongLine = this.isLongLine(info.text, state.config) ? 'true' : 'false';
       info.line.style.minWidth = '';
       info.line.style.marginTop = '';
       info.line.style.display = hiddenLines[index] ? 'none' : 'block';
@@ -268,6 +279,17 @@ export class FormulaEditorEnhancer {
     const editorHeight = Math.max(0, formulaEditor.offsetHeight);
     state.gutterBackdrop.style.height = px(editorHeight);
     state.gutter.style.height = px(editorHeight);
+    formulaEditor.classList.toggle('cfw-focus-mode', Boolean(state.config?.focusMode));
+  }
+
+  isLongLine(text, config = {}) {
+    if (!config.highlightLongLines) return false;
+    const column = Number.isFinite(config.longLineColumn) ? config.longLineColumn : 120;
+    return this.visibleLength(text) > column;
+  }
+
+  visibleLength(text) {
+    return String(text || '').replace(/\t/g, '  ').length;
   }
 
   countLeadingSpaces(text) {

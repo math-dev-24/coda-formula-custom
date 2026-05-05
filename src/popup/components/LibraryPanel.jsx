@@ -1,4 +1,5 @@
 import PresetCard from './PresetCard';
+import { useMemo, useState } from 'react';
 
 function LibraryActions({ count, onExport, onImport }) {
   const handleExport = async () => {
@@ -53,10 +54,26 @@ function LibraryActions({ count, onExport, onImport }) {
   );
 }
 
-export default function LibraryPanel({ presets, onApply, onRename, onDelete, onExport, onImport }) {
-  const list = Object.values(presets || {}).sort((a, b) => b.createdAt - a.createdAt);
+export default function LibraryPanel({ presets, onApply, onRename, onDuplicate, onDelete, onExport, onImport }) {
+  const [query, setQuery] = useState('');
+  const list = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return Object.values(presets || {})
+      .filter(preset => {
+        if (!normalized) return true;
+        const config = preset.config || {};
+        return [
+          preset.name,
+          config.editorTheme,
+          config.editorFontFamily,
+          config.documentationPosition,
+        ].filter(Boolean).join(' ').toLowerCase().includes(normalized);
+      })
+      .sort((a, b) => b.createdAt - a.createdAt);
+  }, [presets, query]);
+  const total = Object.keys(presets || {}).length;
 
-  if (list.length === 0) {
+  if (total === 0) {
     return (
       <div className="space-y-3">
         <LibraryActions count={0} onExport={onExport} onImport={onImport} />
@@ -76,9 +93,21 @@ export default function LibraryPanel({ presets, onApply, onRename, onDelete, onE
 
   return (
     <div className="space-y-2">
-      <LibraryActions count={list.length} onExport={onExport} onImport={onImport} />
+      <LibraryActions count={total} onExport={onExport} onImport={onImport} />
+      <input
+        type="search"
+        value={query}
+        onChange={event => setQuery(event.target.value)}
+        placeholder="Search presets"
+        className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-[12px] text-gray-700 dark:text-gray-200 outline-none focus:border-coda-400 focus:ring-1 focus:ring-coda-400/20"
+      />
+      {list.length === 0 && (
+        <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 p-4 text-center text-[12px] text-gray-400">
+          No presets match this search.
+        </div>
+      )}
       {list.map(p => (
-        <PresetCard key={p.id} preset={p} onApply={onApply} onRename={onRename} onDelete={onDelete} />
+        <PresetCard key={p.id} preset={p} onApply={onApply} onRename={onRename} onDuplicate={onDuplicate} onDelete={onDelete} />
       ))}
     </div>
   );

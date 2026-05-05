@@ -1,6 +1,7 @@
 import { ensureEnhancementStyles } from './enhancement-styles.js';
 import { StorageManager } from '../shared/storage.js';
-import { PRESET_SNAPSHOT_KEYS } from '../shared/config.js';
+import { PRESET_SNAPSHOT_KEYS, mergeConfig } from '../shared/config.js';
+import { CODA_FORMULA_SNIPPETS } from '../shared/formula-snippets.js';
 
 const PALETTE_SHORTCUT = 'Alt/Option+Shift+P';
 const DOC_POSITIONS = [
@@ -18,7 +19,8 @@ function getSortedPresets(config) {
 }
 
 function matchesPreset(config, preset) {
-  return PRESET_SNAPSHOT_KEYS.every(key => config[key] === preset.config?.[key]);
+  const normalizedPresetConfig = mergeConfig(preset.config || {});
+  return PRESET_SNAPSHOT_KEYS.every(key => config[key] === normalizedPresetConfig[key]);
 }
 
 function searchText(command) {
@@ -141,6 +143,16 @@ export class CommandPalette {
         subtitle: active ? 'Current preset' : 'Saved configuration',
         aliases: ['/preset', '/config', preset.name],
         run: () => this.applyPreset(preset.id),
+      });
+    }
+
+    for (const item of CODA_FORMULA_SNIPPETS) {
+      commands.push({
+        id: `snippet-${item.id}`,
+        title: `Copy formula snippet: ${item.name}`,
+        subtitle: item.signature,
+        aliases: [`/fn ${item.id}`, '/function', item.name, item.signature],
+        run: () => this.copySnippet(item.snippet),
       });
     }
 
@@ -299,6 +311,16 @@ export class CommandPalette {
   async resetToDefaults() {
     if (this.actions.resetConfig) return this.actions.resetConfig();
     return false;
+  }
+
+  async copySnippet(snippet) {
+    try {
+      await navigator.clipboard.writeText(snippet);
+      return true;
+    } catch (error) {
+      console.warn('[Coda Formula Customizer] copy snippet failed:', error);
+      return false;
+    }
   }
 
   showStatus(message) {

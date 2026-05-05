@@ -9,6 +9,7 @@ export function useChromeStorage() {
   const [config, setConfig] = useState({ ...DEFAULT_CONFIG });
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState({ message: '', type: '' });
+  const [activeTab, setActiveTab] = useState({ supported: false, label: 'No active supported tab' });
   const statusTimeoutRef = useRef(null);
 
   useEffect(() => {
@@ -16,6 +17,8 @@ export function useChromeStorage() {
       setConfig(cfg);
       setLoading(false);
     });
+
+    refreshActiveTab();
   }, []);
 
   useEffect(() => {
@@ -38,6 +41,24 @@ export function useChromeStorage() {
       setStatus({ message: '', type: '' });
       statusTimeoutRef.current = null;
     }, 3000);
+  }, []);
+
+  const refreshActiveTab = useCallback(async () => {
+    try {
+      const [tab] = await chrome.tabs?.query?.({ active: true, currentWindow: true }) || [];
+      const url = tab?.url || '';
+      const supported =
+        /^https?:\/\/(?:[^/]+\.)?coda\.io\/d\//.test(url) ||
+        /^https?:\/\/(?:[^/]+\.)?grammarly\.com\//.test(url);
+      setActiveTab({
+        supported,
+        label: supported
+          ? (url.includes('grammarly.com') ? 'Active on Grammarly' : 'Active on Coda')
+          : 'Open Coda or Grammarly to use live commands',
+      });
+    } catch (_error) {
+      setActiveTab({ supported: false, label: 'Tab status unavailable' });
+    }
   }, []);
 
   const saveConfig = useCallback(async (newConfig) => {
@@ -112,6 +133,18 @@ export function useChromeStorage() {
     }
   }, [showStatus]);
 
+  const duplicateCustomPreset = useCallback(async (id) => {
+    const duplicateId = await StorageManager.duplicateCustomPreset(id);
+    if (duplicateId) {
+      const cfg = await StorageManager.getConfig();
+      setConfig(cfg);
+      showStatus('Preset duplicated', 'success');
+      return duplicateId;
+    }
+    showStatus('Could not duplicate preset', 'error');
+    return null;
+  }, [showStatus]);
+
   const exportCustomPresets = useCallback(async () => {
     const exported = await StorageManager.exportCustomPresets();
     if (!exported) {
@@ -140,9 +173,12 @@ export function useChromeStorage() {
     resetConfig,
     loading,
     status,
+    activeTab,
+    refreshActiveTab,
     saveCustomPreset,
     applyCustomPreset,
     renameCustomPreset,
+    duplicateCustomPreset,
     deleteCustomPreset,
     exportCustomPresets,
     importCustomPresets,

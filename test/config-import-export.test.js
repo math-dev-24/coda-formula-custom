@@ -31,6 +31,9 @@ const preset = {
     editorLineHeight: 1.6,
     editorFontFamily: 'jetbrains-mono',
     editorTheme: 'dark',
+    focusMode: false,
+    highlightLongLines: true,
+    longLineColumn: 120,
     showIndentGuides: true,
     indentGuideStyle: 'dashed',
     highlightActiveIndent: true,
@@ -114,6 +117,17 @@ test('applyNextPresetToConfig cycles after the active preset', () => {
   assert.equal(isPresetActive(current, preset), true);
   assert.deepEqual(getSortedCustomPresets(current).map(p => p.id), ['preset-1', 'preset-2']);
   assert.equal(applyNextPresetToConfig(current).editorTheme, 'sepia');
+});
+
+test('isPresetActive treats older presets as defaulted snapshots', () => {
+  const legacyPreset = {
+    ...preset,
+    config: Object.fromEntries(
+      Object.entries(preset.config).filter(([key]) => !['focusMode', 'highlightLongLines', 'longLineColumn'].includes(key))
+    ),
+  };
+
+  assert.equal(isPresetActive({ ...preset.config }, legacyPreset), true);
 });
 
 test('toggleDocumentationInConfig flips visibility without dropping presets', () => {

@@ -170,6 +170,24 @@ export function ensureEnhancementStyles() {
       height: 1px;
     }
 
+    .cfw-formula-line[data-coda-formula-long-line="true"] {
+      box-shadow: inset -3px 0 0 rgba(237, 106, 82, 0.55);
+      background-image: linear-gradient(to right, transparent, transparent calc(100% - 12px), rgba(237, 106, 82, 0.08));
+    }
+
+    .cfw-panel-layout:has(.cfw-focus-mode) > .cfw-panel-side,
+    .cfw-panel-layout:has(.cfw-focus-mode) > .cfw-panel-handle {
+      display: none !important;
+    }
+
+    .cfw-panel-layout:has(.cfw-focus-mode) > .cfw-panel-main {
+      flex: 1 1 100% !important;
+    }
+
+    .cfw-focus-mode {
+      box-shadow: inset 0 0 0 2px rgba(237, 106, 82, 0.22);
+    }
+
     .cfw-fold-control {
       position: absolute;
       left: 2px;
