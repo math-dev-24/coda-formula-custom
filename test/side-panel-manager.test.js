@@ -55,3 +55,49 @@ test('persistEditorProportion is a no-op when no panel size has been recorded', 
   manager.persistEditorProportion();
   assert.deepEqual(calls, []);
 });
+
+test('applyPanelVisibility hides documentation from config without dropping sizing state', () => {
+  const manager = new SidePanelManager();
+  const handle = { style: {} };
+  const mainChild = {
+    style: {},
+    parentElement: {
+      querySelector() {
+        return handle;
+      },
+    },
+  };
+  const sideChild = { style: {} };
+
+  sessionState.panelHidden = false;
+  sessionState.panelWidthPercent = 25;
+  manager.applyPanelVisibility(mainChild, sideChild, 'right', {
+    showDocumentation: false,
+    documentationPosition: 'right',
+    editorProportion: 75,
+  });
+
+  assert.equal(sideChild.style.display, 'none');
+  assert.equal(mainChild.style.flex, '1 1 100%');
+  assert.equal(sideChild.style.flex, '0 0 0');
+  assert.equal(sideChild.style.width, '0px');
+  assert.equal(sideChild.style.maxWidth, '0px');
+  assert.equal(handle.style.display, 'none');
+  assert.equal(handle.style.flex, '0 0 0');
+  assert.equal(sessionState.panelWidthPercent, 25);
+
+  manager.applyPanelVisibility(mainChild, sideChild, 'right', {
+    showDocumentation: true,
+    documentationPosition: 'right',
+    editorProportion: 75,
+  });
+
+  assert.equal(sideChild.style.display, '');
+  assert.equal(sideChild.style.width, '');
+  assert.equal(sideChild.style.maxWidth, '');
+  assert.equal(handle.style.display, '');
+  assert.equal(handle.style.flex, '');
+  assert.equal(mainChild.style.flex, '0 1 75%');
+  assert.equal(sideChild.style.flex, '0 0 25%');
+  sessionState.panelWidthPercent = null;
+});

@@ -136,3 +136,43 @@ export function mergeConfig(userConfig) {
     documentationProportion: 100 - (userConfig.editorProportion || DEFAULT_CONFIG.editorProportion),
   };
 }
+
+export function getSortedCustomPresets(config) {
+  return Object.values(config?.customPresets || {})
+    .filter(preset => preset?.id && preset?.config)
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+}
+
+export function isPresetActive(config, preset) {
+  if (!config || !preset?.config) return false;
+  return PRESET_SNAPSHOT_KEYS.every(key => config[key] === preset.config[key]);
+}
+
+export function applyPresetToConfig(config, presetId) {
+  const current = mergeConfig(config || {});
+  const preset = current.customPresets?.[presetId];
+  if (!preset) return null;
+
+  return mergeConfig({
+    ...current,
+    ...preset.config,
+    customPresets: current.customPresets,
+  });
+}
+
+export function applyNextPresetToConfig(config) {
+  const current = mergeConfig(config || {});
+  const presets = getSortedCustomPresets(current);
+  if (presets.length === 0) return null;
+
+  const activeIndex = presets.findIndex(preset => isPresetActive(current, preset));
+  return applyPresetToConfig(current, presets[(activeIndex + 1) % presets.length].id);
+}
+
+export function toggleDocumentationInConfig(config) {
+  const current = mergeConfig(config || {});
+  return mergeConfig({
+    ...current,
+    showDocumentation: !current.showDocumentation,
+  });
+}

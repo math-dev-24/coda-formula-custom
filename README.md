@@ -2,16 +2,28 @@
 
 Extension Chrome (Manifest V3) pour personnaliser l'editeur de formules Coda. Redimensionnez la modale, ajustez les polices, appliquez des themes, gerez une bibliotheque de presets et controlez le panneau de documentation.
 
+Version actuelle : **2.3.0**.
+
 ## Fonctionnalites
 
 ### Presets custom (bibliotheque)
 
 - **Sauvegarder** la configuration courante sous un nom libre (onglet Custom → "Save current config as preset")
 - **Appliquer** un preset d'un clic depuis l'onglet Library
+- **Switcher rapidement** avec la palette `Alt/Option+Shift+P`, puis `/next` ou le nom du preset
 - **Renommer** un preset en cliquant l'icone crayon (edition inline)
 - **Supprimer** un preset avec confirmation native
 - **Exporter / importer** la bibliotheque de presets en JSON depuis l'onglet Library
 - Les presets capturent un snapshot complet de la configuration (taille modale, editeur, guides, documentation) sans inclure la bibliotheque elle-meme
+
+### Commandes rapides
+
+- **Palette Coda** : `Alt/Option+Shift+P` ouvre une palette directement dans le document Coda
+- **Alias slash** : `/popup`, `/next`, `/docs`, `/guides`, `/reset`, `/doc right`, `/doc left`, `/doc top`, `/doc bottom`
+- **Popup Chrome** : `Alt/Option+Shift+Y` ouvre la popup de l'extension
+- **Preset suivant** : `Alt/Option+Shift+N` applique le prochain preset sauvegarde
+- **Documentation** : `Alt/Option+Shift+D` affiche ou masque la documentation
+- **Onglet Commands** : la popup liste les raccourcis clavier et les alias de palette disponibles
 
 ### Modale
 
@@ -40,6 +52,7 @@ Extension Chrome (Manifest V3) pour personnaliser l'editeur de formules Coda. Re
 - **Proportion** : ratio editeur / documentation reglable de 30 % a 80 %
 - **Resize live** : poignee entre l'editeur et la documentation
 - **Masquage rapide** : clic sur la poignee ou double appui sur `Cmd` / `Ctrl`
+- **Toggle live** : le masquage via raccourci ou palette ajuste le panneau en place, sans refresh de Coda
 
 ## Stack technique
 
@@ -50,6 +63,7 @@ Extension Chrome (Manifest V3) pour personnaliser l'editeur de formules Coda. Re
 | **@crxjs/vite-plugin** | Integration Chrome Extension |
 | **JavaScript ES6+** | Content script (vanilla) |
 | **Chrome Extension Manifest V3** | APIs Chrome |
+| **Service worker MV3** | Commandes Chrome et broadcast de configuration |
 
 ## Installation
 
@@ -98,8 +112,12 @@ coda-formula-custom/
     │   ├── config.js             # DEFAULT_CONFIG, PRESET_SNAPSHOT_KEYS, validateConfig, mergeConfig, snapshotConfig
     │   └── storage.js            # StorageManager (ACID) + CRUD presets custom
     │
+    ├── background/               # Service worker MV3
+    │   └── index.js              # Commandes Chrome + broadcast config
+    │
     ├── content/                  # Content script (injecte dans Coda)
     │   ├── index.js              # Point d'entree
+    │   ├── command-palette.js    # Palette de commandes dans la page Coda
     │   ├── style-manager.js      # Gestion CSS, polices, themes
     │   ├── dom-selector.js       # Selection d'elements DOM Coda
     │   ├── modal-size-manager.js # Taille et position de la modale
@@ -116,7 +134,7 @@ coda-formula-custom/
     └── popup/                    # Interface utilisateur (React, 480 px)
         ├── index.html            # HTML shell
         ├── main.jsx              # Point d'entree React
-        ├── App.jsx               # Composant racine, 2 onglets (Custom / Library)
+        ├── App.jsx               # Composant racine, 3 onglets (Custom / Library / Commands)
         ├── App.css               # Styles (CSS variables, dark theme)
         ├── hooks/
         │   └── useChromeStorage.js  # Hook sync chrome.storage <-> React + presets custom
@@ -131,6 +149,7 @@ coda-formula-custom/
             ├── EditorSettingsPanel.jsx
             ├── IndentGuidesPanel.jsx
             ├── DocumentationPanel.jsx
+            ├── CommandsPanel.jsx # Liste des raccourcis et commandes palette
             ├── ActionBar.jsx     # Bouton Reset (onglet Custom uniquement)
             └── StatusMessage.jsx # Toast de statut
 ```
@@ -149,6 +168,8 @@ Popup (React) → useChromeStorage hook
               → StorageManager.saveConfig()
               → chrome.storage.local
               → StorageManager.notifyConfigChange()
+                → direct chrome.tabs depuis popup/background
+                → ou BROADCAST_CONFIG_UPDATE via service worker depuis content script
               → Content Script: ModalCustomizer.updateConfig()
                   → DialogProcessor (reset + reprocess)
                       ├── ModalSizeManager.applySize()
@@ -195,6 +216,13 @@ Popup (React) → useChromeStorage hook
 | `npm test` | Tests unitaires avec le runner natif Node |
 | `npm run preview` | Preview du build de production |
 
+### Publication Chrome Web Store
+
+1. Verifier que `manifest.json`, `package.json` et `package-lock.json` ont la meme version.
+2. Lancer `npm test` puis `npm run build`.
+3. Charger le dossier `dist/` dans Chrome pour un test manuel rapide.
+4. Zipper le contenu de `dist/` pour l'envoi au store.
+
 ### Ajouter une fonctionnalite
 
 1. Ajouter la propriete dans `src/shared/config.js` (`DEFAULT_CONFIG` + `validateConfig`). Si elle doit etre incluse dans les presets custom, l'ajouter aussi dans `PRESET_SNAPSHOT_KEYS`.
@@ -217,12 +245,13 @@ div[data-coda-ui-id="formula-editor"]          /* Editeur de formule */
 |----------|---------|
 | L'extension ne fonctionne pas | Verifier que la page est sur `coda.io/d/*`, rafraichir la page |
 | Les changements ne s'appliquent pas | Rafraichir la page Coda, ouvrir une nouvelle modale de formule |
+| Un raccourci ne marche pas | Ouvrir `chrome://extensions/shortcuts` et verifier que le raccourci n'est pas pris par une autre extension |
 | Reinitialisation | Cliquer sur "Reset to defaults" dans l'onglet Custom |
 
 ## Compatibilite
 
 - Chrome 88+ (Manifest V3)
-- Permissions : `storage`, `activeTab`
+- Permissions : `storage`, `activeTab`, `tabs`
 - Host permissions : `*://*.coda.io/*`
 
 ## Licence

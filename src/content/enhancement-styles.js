@@ -223,6 +223,161 @@ export function ensureEnhancementStyles() {
       left: 0;
       pointer-events: none;
     }
+
+    .cfw-command-palette-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483647;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: min(12vh, 96px) 16px 16px;
+      background: rgba(17, 24, 39, 0.22);
+      box-sizing: border-box;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .cfw-command-palette {
+      width: min(640px, 100%);
+      max-height: min(560px, calc(100vh - 48px));
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      color: #111827;
+      background: #ffffff;
+      border: 1px solid rgba(17, 24, 39, 0.12);
+      border-radius: 8px;
+      box-shadow: 0 18px 50px rgba(17, 24, 39, 0.25);
+    }
+
+    .cfw-command-palette-input-wrap {
+      position: relative;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .cfw-command-palette-input {
+      width: 100%;
+      height: 52px;
+      padding: 0 132px 0 16px;
+      border: 0;
+      outline: 0;
+      box-sizing: border-box;
+      font: 500 15px/1.4 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #111827;
+      background: #ffffff;
+    }
+
+    .cfw-command-palette-input::placeholder {
+      color: #6b7280;
+    }
+
+    .cfw-command-palette-shortcut {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #6b7280;
+      font-size: 11px;
+      line-height: 1;
+      padding: 5px 7px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #f9fafb;
+      pointer-events: none;
+    }
+
+    .cfw-command-palette-list {
+      overflow-y: auto;
+      padding: 6px;
+    }
+
+    .cfw-command-palette-item {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2px;
+      padding: 10px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .cfw-command-palette-item.is-selected,
+    .cfw-command-palette-item:hover {
+      background: #eef2ff;
+    }
+
+    .cfw-command-palette-item-title {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 650;
+      color: #111827;
+    }
+
+    .cfw-command-palette-item-subtitle {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .cfw-command-palette-empty,
+    .cfw-command-palette-status {
+      padding: 12px 14px;
+      color: #6b7280;
+      font-size: 12px;
+    }
+
+    .cfw-command-palette-status:empty {
+      display: none;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .cfw-command-palette {
+        color: #f9fafb;
+        background: #111827;
+        border-color: rgba(255, 255, 255, 0.12);
+      }
+
+      .cfw-command-palette-input-wrap {
+        border-bottom-color: rgba(255, 255, 255, 0.12);
+      }
+
+      .cfw-command-palette-input {
+        color: #f9fafb;
+        background: #111827;
+      }
+
+      .cfw-command-palette-input::placeholder,
+      .cfw-command-palette-shortcut,
+      .cfw-command-palette-item-subtitle,
+      .cfw-command-palette-empty,
+      .cfw-command-palette-status {
+        color: #9ca3af;
+      }
+
+      .cfw-command-palette-shortcut {
+        border-color: rgba(255, 255, 255, 0.16);
+        background: #1f2937;
+      }
+
+      .cfw-command-palette-item.is-selected,
+      .cfw-command-palette-item:hover {
+        background: #1f2937;
+      }
+
+      .cfw-command-palette-item-title {
+        color: #f9fafb;
+      }
+    }
   `;
   document.head.appendChild(style);
 }

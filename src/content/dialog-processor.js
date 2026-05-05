@@ -35,14 +35,8 @@ export class DialogProcessor {
     const rootDiv = this.domSelector.findRootDiv(dialog);
     if (!rootDiv) return;
 
-    this.modalSizeManager.applySize(rootDiv, this.config);
+    this.applyDialogFrame(dialog, this.config);
     this.dialogInteractionManager.enhance(dialog, rootDiv);
-
-    if (this.config.transparentBackground) {
-      dialog.style.background = 'transparent';
-    } else {
-      dialog.style.background = '';
-    }
 
     this.styleManager.applyEditorStyles(formulaDiv, this.config);
     this.formulaEditorEnhancer.enhance(formulaDiv);
@@ -66,6 +60,33 @@ export class DialogProcessor {
    */
   applyStyles(formulaDiv, config) {
     this.styleManager.applyEditorStyles(formulaDiv, config);
+  }
+
+  /**
+   * Apply dialog frame-only settings without resetting the layout.
+   * @param {HTMLElement} dialog - The dialog element
+   * @param {Object} config - Current configuration
+   */
+  applyDialogFrame(dialog, config) {
+    const rootDiv = this.domSelector.findRootDiv(dialog);
+    if (!rootDiv) return;
+
+    this.modalSizeManager.applySize(rootDiv, config);
+    dialog.style.background = config.transparentBackground ? 'transparent' : '';
+  }
+
+  /**
+   * Apply documentation visibility/proportion in place when possible.
+   * @param {HTMLElement} dialog - The dialog element
+   * @param {Object} config - Current configuration
+   * @returns {boolean} True when an existing layout was updated
+   */
+  applyDocumentationVisibility(dialog, config) {
+    const rootDiv = this.domSelector.findRootDiv(dialog);
+    if (!rootDiv) return false;
+
+    const target = this.domSelector.findTargetContainer(rootDiv);
+    return this.layoutManager.applyDocumentationVisibility(target, config);
   }
 
   /**

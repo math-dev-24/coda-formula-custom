@@ -12,6 +12,9 @@ import {
   createConfigExport,
   createPresetId,
   parseConfigImport,
+  applyPresetToConfig,
+  applyNextPresetToConfig,
+  toggleDocumentationInConfig,
 } from './config.js';
 
 export class StorageManager {
@@ -69,6 +72,14 @@ export class StorageManager {
    */
   static async notifyConfigChange(config) {
     try {
+      if (!chrome.tabs?.query || !chrome.tabs?.sendMessage) {
+        await chrome.runtime?.sendMessage?.({
+          type: 'BROADCAST_CONFIG_UPDATE',
+          config,
+        }).catch(() => {});
+        return;
+      }
+
       const tabs = await chrome.tabs.query({ url: '*://*.coda.io/d/*' });
       for (const tab of tabs) {
         chrome.tabs.sendMessage(tab.id, {
@@ -100,15 +111,33 @@ export class StorageManager {
   static async applyCustomPreset(id) {
     try {
       const current = await this.getConfig();
-      const preset = current.customPresets?.[id];
-      if (!preset) return false;
-      return await this.saveConfig({
-        ...current,
-        ...preset.config,
-        customPresets: current.customPresets,
-      });
+      const nextConfig = applyPresetToConfig(current, id);
+      if (!nextConfig) return false;
+      return await this.saveConfig(nextConfig);
     } catch (e) {
       console.error('[Coda Formula Customizer] applyCustomPreset:', e);
+      return false;
+    }
+  }
+
+  static async applyNextCustomPreset() {
+    try {
+      const current = await this.getConfig();
+      const nextConfig = applyNextPresetToConfig(current);
+      if (!nextConfig) return false;
+      return await this.saveConfig(nextConfig);
+    } catch (e) {
+      console.error('[Coda Formula Customizer] applyNextCustomPreset:', e);
+      return false;
+    }
+  }
+
+  static async toggleDocumentation() {
+    try {
+      const current = await this.getConfig();
+      return await this.saveConfig(toggleDocumentationInConfig(current));
+    } catch (e) {
+      console.error('[Coda Formula Customizer] toggleDocumentation:', e);
       return false;
     }
   }

@@ -4,8 +4,17 @@
  */
 
 import { StorageManager } from '../shared/storage.js';
-import { STORAGE_KEY, mergeConfig, validateConfig } from '../shared/config.js';
+import {
+  DEFAULT_CONFIG,
+  STORAGE_KEY,
+  applyNextPresetToConfig,
+  applyPresetToConfig,
+  mergeConfig,
+  toggleDocumentationInConfig,
+  validateConfig,
+} from '../shared/config.js';
 import { ModalCustomizer } from './modal-customizer.js';
+import { CommandPalette } from './command-palette.js';
 
 const FONT_URLS = [
   {
@@ -21,6 +30,7 @@ const FONT_URLS = [
 class CodaFormulaCustomizer {
   constructor() {
     this.customizer = null;
+    this.commandPalette = null;
     this.lastConfigJSON = '';
     this.init();
   }
@@ -42,6 +52,14 @@ class CodaFormulaCustomizer {
       const config = await StorageManager.getConfig();
       this.lastConfigJSON = JSON.stringify(config);
       this.customizer = new ModalCustomizer(config, partial => this.persistUserChange(partial));
+      this.commandPalette = new CommandPalette({
+        openPopup: () => this.openPopup(),
+        savePartialConfig: partial => this.applyAndSaveConfig(partial),
+        resetConfig: () => this.resetConfig(),
+        applyPreset: id => this.applyPreset(id),
+        applyNextPreset: () => this.applyNextPreset(),
+      });
+      this.commandPalette.init();
 
       if (document.readyState === 'loading') {
         window.addEventListener('DOMContentLoaded', () => this.customizer.init());
@@ -96,6 +114,13 @@ class CodaFormulaCustomizer {
           this.applyUpdate(message.config);
           sendResponse({ success: true });
         }
+        if (message.type === 'TOGGLE_DOCUMENTATION_COMMAND' && this.customizer) {
+          this.applyAndSaveFullConfig(toggleDocumentationInConfig(this.customizer.config))
+            .then(success => sendResponse({ success }));
+        }
+        if (message.type === 'APPLY_NEXT_PRESET_COMMAND' && this.customizer) {
+          this.applyNextPreset().then(success => sendResponse({ success }));
+        }
         return true;
       });
     } catch (e) {
@@ -130,6 +155,55 @@ class CodaFormulaCustomizer {
     if (json === this.lastConfigJSON) return;
     this.lastConfigJSON = json;
     if (this.customizer) this.customizer.updateConfig(newConfig);
+  }
+
+  async openPopup() {
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'OPEN_POPUP' });
+      return Boolean(response?.success);
+    } catch (error) {
+      console.warn('[Coda Formula Customizer] open popup failed:', error);
+      return false;
+    }
+  }
+
+  async applyAndSaveConfig(partial) {
+    if (!this.customizer || !partial) return false;
+    const merged = mergeConfig({ ...this.customizer.config, ...partial });
+    return this.applyAndSaveFullConfig(merged);
+  }
+
+  async applyAndSaveFullConfig(config) {
+    if (!this.customizer || !config) return false;
+    const merged = mergeConfig(config);
+    if (!validateConfig(merged)) return false;
+
+    const json = JSON.stringify(merged);
+    if (json !== this.lastConfigJSON) {
+      this.lastConfigJSON = json;
+      this.customizer.updateConfig(merged);
+    }
+
+    return StorageManager.saveConfig(merged);
+  }
+
+  async resetConfig() {
+    const current = this.customizer?.config || await StorageManager.getConfig();
+    return this.applyAndSaveConfig({
+      ...DEFAULT_CONFIG,
+      customPresets: current.customPresets || {},
+    });
+  }
+
+  async applyPreset(id) {
+    const current = this.customizer?.config || await StorageManager.getConfig();
+    const nextConfig = applyPresetToConfig(current, id);
+    return this.applyAndSaveFullConfig(nextConfig);
+  }
+
+  async applyNextPreset() {
+    const current = this.customizer?.config || await StorageManager.getConfig();
+    return this.applyAndSaveFullConfig(applyNextPresetToConfig(current));
   }
 }
 

@@ -11,6 +11,7 @@ import IndentGuidesPanel from './components/IndentGuidesPanel';
 import DocumentationPanel from './components/DocumentationPanel';
 import ActionBar from './components/ActionBar';
 import StatusMessage from './components/StatusMessage';
+import CommandsPanel from './components/CommandsPanel';
 
 const ModalIcon = () => (
   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -47,6 +48,14 @@ const SlidersIcon = () => (
     <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
     <line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" />
     <line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" />
+  </svg>
+);
+const CommandIcon = () => (
+  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M4 17l6-10" />
+    <path d="M14 7h6" />
+    <path d="M14 12h6" />
+    <path d="M14 17h6" />
   </svg>
 );
 
@@ -94,6 +103,7 @@ export default function App() {
           tabs={[
             { id: 'custom', label: 'Custom', icon: <SlidersIcon /> },
             { id: 'library', label: 'Library', icon: <LibraryIcon />, badge: presetCount },
+            { id: 'commands', label: 'Commands', icon: <CommandIcon /> },
           ]}
         />
       </div>
@@ -131,7 +141,7 @@ export default function App() {
               <span>Changes are saved automatically. Refresh the Coda page or reopen the formula editor to see updates.</span>
             </div>
           </>
-        ) : (
+        ) : tab === 'library' ? (
           <div className="animate-in">
             <LibraryPanel
               presets={config.customPresets}
@@ -141,6 +151,10 @@ export default function App() {
               onExport={exportCustomPresets}
               onImport={importCustomPresets}
             />
+          </div>
+        ) : (
+          <div className="animate-in">
+            <CommandsPanel />
           </div>
         )}
       </main>

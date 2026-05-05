@@ -4,6 +4,8 @@
 
 Extension Chrome (Manifest V3) qui personnalise l'editeur de formules Coda. Le popup est une app React 19, le content script est du JavaScript vanilla. Vite + @crxjs/vite-plugin gerent le build.
 
+Version actuelle : **2.3.0**.
+
 ## Stack technique
 
 | Couche | Technologie |
@@ -12,7 +14,7 @@ Extension Chrome (Manifest V3) qui personnalise l'editeur de formules Coda. Le p
 | Content Script | JavaScript ES6+, MutationObserver, ResizeObserver |
 | Build | Vite 7, @crxjs/vite-plugin, @vitejs/plugin-react |
 | Stockage | chrome.storage.local |
-| Communication | chrome.runtime.onMessage, chrome.tabs.sendMessage |
+| Communication | chrome.runtime.onMessage, chrome.tabs.sendMessage, chrome.commands |
 | Tests | Node test runner |
 
 ## Structure des modules
@@ -23,8 +25,8 @@ Importe par le popup ET le content script. Source unique de verite.
 
 | Module | Responsabilite |
 |--------|---------------|
-| `config.js` | `DEFAULT_CONFIG`, `PRESET_SNAPSHOT_KEYS`, `validateConfig()`, `mergeConfig()`, `snapshotConfig()` |
-| `storage.js` | `StorageManager` : CRUD config, presets custom, notification cross-tabs |
+| `config.js` | `DEFAULT_CONFIG`, helpers presets/toggle, validation, merge, snapshot |
+| `storage.js` | `StorageManager` : CRUD config, presets custom, notification cross-tabs context-aware |
 
 ### `src/content/` — Content Script
 
@@ -35,11 +37,12 @@ Injecte dans les pages `coda.io/d/*`. Architecture SOLID avec des managers speci
 | `ModalCustomizer` | Observer | Point d'entree, MutationObserver sur le DOM |
 | `DialogProcessor` | Facade | Orchestre les managers du dialogue |
 | `StyleManager` | - | CSS global, inline styles, themes, indent guides |
-| `LayoutManager` | - | Flex wrappers, position documentation, reset |
+| `LayoutManager` | - | Flex wrappers, position documentation, reset, toggle live |
 | `ModalSizeManager` | - | Taille et position de la modale |
 | `DialogInteractionManager` | - | Drag, resize natif, maximize, dim outside, scroll pass-through |
 | `FormulaEditorEnhancer` | - | Folding, no-wrap, scroll horizontal |
 | `SidePanelManager` | - | Poignee live du panneau documentation, masquage rapide |
+| `CommandPalette` | - | Palette `Alt/Option+Shift+P`, alias slash, application rapide des presets |
 | `DOMSelector` | - | Queries DOM avec selecteurs Coda |
 
 Modules de support :
@@ -50,11 +53,17 @@ Modules de support :
 | `session-state.js` | Etat runtime non persistant : taille courante, folds, panneau masque |
 | `utils.js` | Helpers purs reutilises par les managers |
 
+### `src/background/` - Service worker
+
+| Module | Responsabilite |
+|--------|---------------|
+| `index.js` | Commandes Chrome : ouverture popup, cycle vers le prochain preset, toggle documentation, broadcast config |
+
 ### `src/popup/` — Interface React
 
 | Fichier | Role |
 |---------|------|
-| `App.jsx` | Composant racine, 2 onglets (Custom / Library), 480 px |
+| `App.jsx` | Composant racine, 3 onglets (Custom / Library / Commands), 480 px |
 | `hooks/useChromeStorage.js` | Hook sync `chrome.storage` ↔ React state + CRUD presets custom |
 | `components/Header.jsx` | Header gradient + toggle theme sombre |
 | `components/Tabs.jsx` | Barre d'onglets controlee avec badge optionnel |
@@ -66,6 +75,7 @@ Modules de support :
 | `components/EditorSettingsPanel.jsx` | Font size, line height, font family, theme |
 | `components/IndentGuidesPanel.jsx` | Toggle guides, style, highlight actif |
 | `components/DocumentationPanel.jsx` | Toggle doc, position 4 directions, proportion |
+| `components/CommandsPanel.jsx` | Liste des raccourcis clavier et alias de palette |
 | `components/ActionBar.jsx` | Bouton Reset (visible uniquement dans l'onglet Custom) |
 | `components/StatusMessage.jsx` | Toast de feedback |
 
@@ -83,7 +93,7 @@ Modules de support :
 │  chrome.storage.local│
 └──────────┬───────────┘
            │ notifyConfigChange()
-           │ chrome.tabs.sendMessage
+           │ chrome.tabs.sendMessage ou message au service worker
            ▼
 ┌──────────────────────┐
 │  Content Script      │
@@ -149,16 +159,24 @@ Le content script utilise `MutationObserver` sur `document.body` pour detecter l
 - `LayoutManager` cree le wrapper flex selon la position choisie.
 - `SidePanelManager` ajoute une poignee entre l'editeur et la documentation.
 - Glisser la poignee ajuste la proportion courante. Cliquer sur la poignee ou double-appuyer sur `Cmd` / `Ctrl` masque ou restaure la documentation.
+- Le toggle `showDocumentation` est applique live sur le wrapper existant : le panneau documentation et la poignee passent a `display: none`, `flex: 0 0 0` et largeur/hauteur 0, tandis que l'editeur prend `flex: 1 1 100%`.
+
+### Commandes
+
+- Le manifest declare `_execute_action`, `apply-next-preset` et `toggle-documentation`.
+- Le service worker recoit les commandes Chrome et tente d'abord une commande live vers l'onglet Coda actif.
+- La palette de commandes in-page (`Alt/Option+Shift+P`) utilise les memes helpers de config que le storage pour appliquer presets, toggles et reset.
 
 ### Presets custom (bibliotheque)
 
 - `snapshotConfig(config)` extrait les champs snapshotables (definis dans `PRESET_SNAPSHOT_KEYS`) pour exclure `customPresets` du snapshot.
 - `StorageManager.saveCustomPreset(name)` cree un preset avec un UUID, un timestamp et un snapshot de la config courante.
 - `StorageManager.applyCustomPreset(id)` overlay le snapshot sur la config courante en preservant explicitement `customPresets`.
+- `applyPresetToConfig()`, `applyNextPresetToConfig()` et `toggleDocumentationInConfig()` centralisent la logique pour que popup, content script et service worker restent coherents.
 - `StorageManager.exportCustomPresets()` produit un JSON versionne avec la bibliotheque de presets.
 - `StorageManager.importCustomPresets(payload)` valide les presets importes et les fusionne avec la bibliotheque existante.
 - Le hook `useChromeStorage` expose `saveCustomPreset`, `applyCustomPreset`, `renameCustomPreset`, `deleteCustomPreset`, `exportCustomPresets`, `importCustomPresets`.
-- `notifyConfigChange` est appele automatiquement apres chaque operation : le content script recoit toujours le push.
+- `notifyConfigChange` est appele automatiquement apres chaque operation. Depuis popup/background il utilise `chrome.tabs`; depuis un content script il passe par `BROADCAST_CONFIG_UPDATE` au service worker.
 
 ## Principes appliques
 

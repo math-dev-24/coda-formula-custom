@@ -36,23 +36,43 @@ export class ModalCustomizer {
     const prev = this.config;
     this.config = newConfig;
 
-    const layoutChanged =
+    const frameChanged =
       prev.modalWidth !== newConfig.modalWidth ||
       prev.modalHeight !== newConfig.modalHeight ||
       prev.modalLeft !== newConfig.modalLeft ||
       prev.modalTop !== newConfig.modalTop ||
-      prev.transparentBackground !== newConfig.transparentBackground ||
+      prev.transparentBackground !== newConfig.transparentBackground;
+
+    const documentationVisibilityChanged =
       prev.showDocumentation !== newConfig.showDocumentation ||
-      prev.documentationPosition !== newConfig.documentationPosition ||
       prev.editorProportion !== newConfig.editorProportion;
 
-    if (layoutChanged) {
+    const layoutChanged =
+      prev.documentationPosition !== newConfig.documentationPosition;
+
+    if (documentationVisibilityChanged && !layoutChanged) {
+      this.dialogProcessor.config = newConfig;
+      let appliedEverywhere = true;
+      this.domSelector.findDialogs().forEach(dialog => {
+        if (!this.dialogProcessor.applyDocumentationVisibility(dialog, newConfig)) {
+          appliedEverywhere = false;
+        }
+      });
+      if (appliedEverywhere) return;
+    }
+
+    if (layoutChanged || documentationVisibilityChanged) {
       this.domSelector.findDialogs().forEach(dialog => {
         this.dialogProcessor.resetDialog(dialog);
       });
       this.dialogProcessor = new DialogProcessor(newConfig, this.onUserChange);
       this.processedDialogs = new WeakSet();
       this.processDialogs();
+    } else if (frameChanged) {
+      this.dialogProcessor.config = newConfig;
+      this.domSelector.findDialogs().forEach(dialog => {
+        this.dialogProcessor.applyDialogFrame(dialog, newConfig);
+      });
     } else {
       // Style-only update: re-apply styles without touching the DOM layout
       this.dialogProcessor.config = newConfig;

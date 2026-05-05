@@ -102,20 +102,55 @@ export class SidePanelManager {
     if (position === 'left' || position === 'right') {
       mainChild.style.width = '';
       sideChild.style.width = '';
+      sideChild.style.maxWidth = '';
     } else {
       mainChild.style.height = '';
       sideChild.style.height = '';
+      sideChild.style.maxHeight = '';
     }
+    sideChild.style.overflow = '';
   }
 
   applyPanelVisibility(mainChild, sideChild, position, config) {
-    if (sessionState.panelHidden) {
+    const handle = mainChild.parentElement?.querySelector(':scope > [data-coda-formula-panel-resize-handle="true"]');
+    const hiddenByConfig = !config.showDocumentation || config.documentationPosition === 'none';
+    if (config.showDocumentation && config.documentationPosition !== 'none') {
+      sessionState.panelHidden = false;
+    }
+
+    if (hiddenByConfig || sessionState.panelHidden) {
       sideChild.style.display = 'none';
+      sideChild.style.flex = '0 0 0';
+      sideChild.style.overflow = 'hidden';
+      if (position === 'left' || position === 'right') {
+        sideChild.style.width = '0px';
+        sideChild.style.maxWidth = '0px';
+      } else {
+        sideChild.style.height = '0px';
+        sideChild.style.maxHeight = '0px';
+      }
       mainChild.style.flex = '1 1 100%';
+      if (handle) {
+        handle.style.display = 'none';
+        handle.style.flex = '0 0 0';
+        handle.style.width = '0px';
+        handle.style.height = '0px';
+      }
       return;
     }
 
     sideChild.style.display = '';
+    sideChild.style.width = '';
+    sideChild.style.height = '';
+    sideChild.style.maxWidth = '';
+    sideChild.style.maxHeight = '';
+    sideChild.style.overflow = '';
+    if (handle) {
+      handle.style.display = '';
+      handle.style.flex = '';
+      handle.style.width = '';
+      handle.style.height = '';
+    }
     this.applyPanelSize(mainChild, sideChild, position, this.getPanelPercent(config));
   }
 

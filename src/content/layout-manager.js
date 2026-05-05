@@ -22,11 +22,38 @@ export class LayoutManager {
    */
   applyLayout(kids, formulaDiv, config, dialogRoot) {
     if (kids.length < 2) return;
-    if (!config.showDocumentation || config.documentationPosition === 'none') {
+    if (config.documentationPosition === 'none') {
       this.hideDocumentation(kids);
     } else {
       this.showDocumentation(kids, formulaDiv, config, dialogRoot);
     }
+  }
+
+  /**
+   * Apply live documentation visibility/proportion on an existing panel layout.
+   * Mirrors the lightweight behavior from the reference implementation:
+   * keep the flex wrapper in place and only update side/main flex values.
+   * @param {HTMLElement} target - Target container
+   * @param {Object} config - Current configuration
+   * @returns {boolean} True when an existing panel was updated
+   */
+  applyDocumentationVisibility(target, config) {
+    const wrappers = Array.from(target?.querySelectorAll(':scope > .cfw-panel-layout') || []);
+    const flexWrapper = wrappers.find(wrapper => (
+      wrapper.querySelector(':scope > .cfw-panel-main') &&
+      wrapper.querySelector(':scope > .cfw-panel-side')
+    ));
+    const mainChild = flexWrapper?.querySelector(':scope > .cfw-panel-main');
+    const sideChild = flexWrapper?.querySelector(':scope > .cfw-panel-side');
+    if (!flexWrapper || !mainChild || !sideChild) return false;
+
+    this.sidePanelManager.applyPanelVisibility(
+      mainChild,
+      sideChild,
+      config.documentationPosition || 'right',
+      config
+    );
+    return true;
   }
 
   /**
